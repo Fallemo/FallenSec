@@ -1,0 +1,76 @@
+﻿FallenSec v1.1 - Firewall și monitor de rețea pentru Windows
+© 2026 Fallen
+=============================================================
+
+INSTALARE
+---------
+1. Dezarhivează folderul FallenSec oriunde (ex: C:\Programe\FallenSec).
+   Fișierele trebuie să rămână împreună (FallenSec.exe + dll-uri + wwwroot).
+2. Pornește FallenSec.exe. Windows va cere drepturi de administrator (UAC)
+   - sunt necesare pentru blocare și pentru măsurarea vitezelor.
+3. La prima pornire se descarcă baza de geolocalizare DB-IP (~60 MB),
+   apoi harta se populează.
+
+Cerințe: Windows 10/11 x64, .NET 8 Desktop Runtime, Microsoft Edge WebView2
+(ambele sunt deja instalate pe majoritatea sistemelor Windows 11).
+
+CE FACE
+-------
+- Hartă: toate conexiunile live, cu arce animate de la tine către fiecare
+  destinație. Click pe un punct = detalii + blocare. Cifrele de sus
+  (conexiuni, aplicații, țări, locații) se pot apăsa și deschid liste
+  detaliate; click pe o țară/locație face zoom pe hartă.
+- Aplicații: fiecare program cu viteze download/upload, conexiuni, țări
+  și un slider Internet ON/OFF. OFF = programul pierde instant internetul
+  (și conexiunile deja deschise sunt tăiate).
+- Conexiuni: proces, port, domeniu, IP, oraș, țară, stare, viteze.
+  Butonul ⊘ deschide variante de blocare (doar IP-ul, domeniul, țara, portul).
+- Reguli: reguli detaliate, per aplicație sau pentru tot PC-ul, pe
+  domeniu (cu subdomenii), IP/CIDR, țară, porturi, protocol, direcție.
+- Istoric: grafice de trafic, top aplicații, țări, destinații, porturi,
+  jurnal (aplicații noi, blocări).
+- Buton de panică: taie tot internetul, rețeaua locală rămâne funcțională.
+- Notificare când o aplicație iese pentru prima dată pe internet.
+
+BINE DE ȘTIUT
+-------------
+- Blocarea se face direct prin Windows Filtering Platform (WFP), cu filtre
+  persistente: rămân active și după ce închizi FallenSec sau repornești
+  PC-ul. Funcționează chiar dacă Windows Firewall e oprit, deci merge și
+  alături de Bitdefender, ESET, Kaspersky sau alte firewall-uri.
+- Ca să elimini toate blocările: șterge regulile din pagina Reguli (sau
+  pune sliderele pe ON) înainte de a dezinstala aplicația.
+- Opțional, în Setări > Blocare poți folosi vechiul motor "Windows
+  Firewall" (reguli în grupul "FallenSec"); acesta necesită Windows
+  Firewall pornit și nu funcționează când un alt firewall l-a înlocuit.
+- La prima pornire, aplicația poate fi semnalată de SmartScreen sau de
+  antivirus (nu e semnată digital): "Mai multe informații" > "Rulează
+  oricum", respectiv excepție pentru folderul FallenSec.
+- Iconiță în system tray (lângă ceas): minimizarea, închiderea ferestrei
+  sau butonul "Tray" din bara de sus ascund aplicația acolo, iar
+  monitorizarea continuă. Click pe iconiță = redeschide; click dreapta =
+  meniu (Deschide / Panică / Ieșire). Tooltip-ul arată vitezele live.
+- Datele (reguli, setări, istoric) sunt în C:\ProgramData\FallenSec.
+
+CREDITE
+-------
+IP Geolocation by DB-IP (https://db-ip.com), licență CC BY 4.0.
+Hartă: Natural Earth / world-atlas. Grafice: d3.js.
+
+ISTORIC VERSIUNI
+----------------
+v1.1 (08.11.2026)
+- Blocare direct prin Windows Filtering Platform: merge și când Windows
+  Firewall e oprit (ex. Bitdefender, ESET, Kaspersky). Regulile din v1.0
+  sunt mutate automat. Motorul vechi rămâne opțional în Setări.
+- Detectarea firewall-urilor terțe active, cu mesaj clar.
+- Hartă: cifrele de sus sunt clickabile (liste detaliate cu conexiuni,
+  aplicații, țări, locații), zoom pe țară/locație, buton Înapoi.
+- Aplicații: sortare prin click pe capul de tabel.
+- Conexiuni: filtru Toate / Internet / LAN.
+
+v1.0 (08.11.2026)
+- Prima versiune: hartă live, aplicații cu slider ON/OFF, conexiuni,
+  reguli detaliate (domeniu/IP/țară/port), istoric cu grafice,
+  notificări aplicații noi, buton de panică, pornire cu Windows,
+  iconiță în system tray (minimizare/închidere în tray).

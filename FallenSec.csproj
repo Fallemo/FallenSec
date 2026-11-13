@@ -1,0 +1,43 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
+    <AssemblyName>FallenSec</AssemblyName>
+    <RootNamespace>FallenSec</RootNamespace>
+    <Version>1.1.0</Version>
+    <FileVersion>1.1.0.0</FileVersion>
+    <AssemblyVersion>1.1.0.0</AssemblyVersion>
+    <Product>FallenSec</Product>
+    <Company>Fallen</Company>
+    <Authors>Fallen</Authors>
+    <Copyright>© 2026 Fallen</Copyright>
+    <Description>FallenSec - firewall și monitor de rețea</Description>
+    <ApplicationIcon>Assets\fallensec.ico</ApplicationIcon>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+    <NoWarn>CA1416;WFAC010</NoWarn>
+  </PropertyGroup>
+
+  <!-- Build de test fără elevare: dotnet build -p:NoAdmin=true -->
+  <PropertyGroup Condition="'$(NoAdmin)'=='true'">
+    <ApplicationManifest>app.noadmin.manifest</ApplicationManifest>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="MaxMind.Db" Version="5.2.0" />
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.14" />
+    <PackageReference Include="Microsoft.Diagnostics.Tracing.TraceEvent" Version="4.0.0" />
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.4314.35" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="wwwroot\**\*" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <Resource Include="Assets\fallensec.ico" />
+  </ItemGroup>
+
+</Project>
