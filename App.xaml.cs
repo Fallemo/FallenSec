@@ -10,12 +10,14 @@ public partial class App : System.Windows.Application
     EventWaitHandle? _showEvent;
     public Engine Engine { get; private set; } = null!;
     Forms.NotifyIcon? _tray;
-    Forms.ToolStripMenuItem? _panicItem;
+    Forms.ToolStripMenuItem? _panicItem, _openItem, _exitItem;
     MainWindow? _win;
 
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
+        // limba trebuie stabilită înaintea oricărui text (inclusiv câmpurile statice din Core)
+        try { L.Set(Settings.LoadOrDefault().Language); } catch { L.Set(null); }
         if (e.Args.Contains("--wfptest"))
         {
             var res = WfpService.SelfTest();
@@ -64,12 +66,15 @@ public partial class App : System.Windows.Application
     {
         var sri = GetResourceStream(new Uri("pack://application:,,,/Assets/fallensec.ico"));
         var menu = new Forms.ContextMenuStrip();
-        menu.Items.Add("Deschide FallenSec", null, (_, _) => ShowMain());
-        _panicItem = new Forms.ToolStripMenuItem("Taie tot internetul (panică)") { Checked = Engine.Rules.PanicOn };
+        _openItem = new Forms.ToolStripMenuItem("", null, (_, _) => ShowMain());
+        menu.Items.Add(_openItem);
+        _panicItem = new Forms.ToolStripMenuItem("") { Checked = Engine.Rules.PanicOn };
         _panicItem.Click += (_, _) => Engine.SetPanic(!Engine.Rules.PanicOn);
         menu.Items.Add(_panicItem);
         menu.Items.Add(new Forms.ToolStripSeparator());
-        menu.Items.Add("Ieșire", null, (_, _) => ExitApp());
+        _exitItem = new Forms.ToolStripMenuItem("", null, (_, _) => ExitApp());
+        menu.Items.Add(_exitItem);
+        ApplyTrayLanguage();
         _tray = new Forms.NotifyIcon
         {
             Icon = new System.Drawing.Icon(sri.Stream),
@@ -79,6 +84,13 @@ public partial class App : System.Windows.Application
         };
         _tray.MouseClick += (_, a) => { if (a.Button == Forms.MouseButtons.Left) ShowMain(); };
         _tray.BalloonTipClicked += (_, _) => ShowMain();
+    }
+
+    public void ApplyTrayLanguage()
+    {
+        if (_openItem != null) _openItem.Text = L.T("Deschide FallenSec", "Open FallenSec");
+        if (_panicItem != null) _panicItem.Text = L.T("Taie tot internetul (panică)", "Cut all internet (panic)");
+        if (_exitItem != null) _exitItem.Text = L.T("Ieșire", "Exit");
     }
 
     public void ShowMain()
@@ -95,8 +107,9 @@ public partial class App : System.Windows.Application
         if (Engine.Settings.TrayHintShown || _tray == null) return;
         Engine.Settings.TrayHintShown = true;
         Engine.Settings.Save();
-        _tray.ShowBalloonTip(5000, "FallenSec rulează în tray",
-            "Monitorizarea continuă în fundal. Click pe iconiță pentru a redeschide, click dreapta pentru meniu.", Forms.ToolTipIcon.Info);
+        _tray.ShowBalloonTip(5000, L.T("FallenSec rulează în tray", "FallenSec is running in the tray"),
+            L.T("Monitorizarea continuă în fundal. Click pe iconiță pentru a redeschide, click dreapta pentru meniu.",
+                "Monitoring continues in the background. Click the icon to reopen it, right-click for the menu."), Forms.ToolTipIcon.Info);
     }
 
     public void ExitApp()

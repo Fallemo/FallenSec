@@ -51,7 +51,7 @@ public sealed class TrafficMonitor : IDisposable
     {
         try
         {
-            if (!(TraceEventSession.IsElevated() ?? false)) { Error = "Fără drepturi de administrator – vitezele nu sunt disponibile."; return; }
+            if (!(TraceEventSession.IsElevated() ?? false)) { Error = L.T("Fără drepturi de administrator – vitezele nu sunt disponibile.", "No administrator rights – speeds are not available."); return; }
             try
             {
                 _kernel = new TraceEventSession("FallenSec-Net") { StopOnDispose = true };

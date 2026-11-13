@@ -77,17 +77,17 @@ public sealed class WfpService : IBlockBackend, IDisposable
         public Win32Exception2(uint code, string what) : base($"{what}: 0x{code:X8} {Describe(code)}") { Code = code; }
         static string Describe(uint c) => c switch
         {
-            5 => "acces refuzat (necesită administrator)",
-            0x80320009 => "există deja",
-            0x80320001 => "callout inexistent",
-            0x80320002 => "condiție invalidă",
-            0x80320003 => "filtru inexistent",
-            0x8032000A => "tip de date invalid pentru condiție",
-            0x80320012 => "prea multe condiții",
-            0x80320025 => "tip de potrivire invalid",
-            0x8032000D => "intervale invalide",
-            0x80320035 => "BFE nu rulează",
-            0x800706D9 => "serviciul BFE (Base Filtering Engine) nu rulează",
+            5 => L.T("acces refuzat (necesită administrator)", "access denied (administrator required)"),
+            0x80320009 => L.T("există deja", "already exists"),
+            0x80320001 => L.T("callout inexistent", "callout not found"),
+            0x80320002 => L.T("condiție invalidă", "invalid condition"),
+            0x80320003 => L.T("filtru inexistent", "filter not found"),
+            0x8032000A => L.T("tip de date invalid pentru condiție", "invalid data type for condition"),
+            0x80320012 => L.T("prea multe condiții", "too many conditions"),
+            0x80320025 => L.T("tip de potrivire invalid", "invalid match type"),
+            0x8032000D => L.T("intervale invalide", "invalid ranges"),
+            0x80320035 => L.T("BFE nu rulează", "BFE is not running"),
+            0x800706D9 => L.T("serviciul BFE (Base Filtering Engine) nu rulează", "the BFE (Base Filtering Engine) service is not running"),
             _ => ""
         };
     }

@@ -63,7 +63,7 @@ public sealed class Engine : IDisposable
     public bool IsAdmin { get; }
     public WfpService? Wfp { get; private set; }
     public string? WfpError { get; private set; }
-    public object BlockStatus { get; private set; } = new { level = "warn", engine = "", text = "Se verifică..." };
+    public object BlockStatus { get; private set; } = new { level = "warn", engine = "", text = L.T("Se verifică...", "Checking...") };
     DateTime _lastBlockCheck = DateTime.MinValue;
     public (double lat, double lon, string? city)? Home { get; private set; }
     public HashSet<string> SentIcons { get; } = new();
@@ -297,14 +297,14 @@ public sealed class Engine : IDisposable
             try
             {
                 Db?.UpsertApp(a, isNew);
-                if (isNew) Db?.AddEvent("new_app", a.Key, "Prima conexiune la internet → " + dest);
+                if (isNew) Db?.AddEvent("new_app", a.Key, L.T("Prima conexiune la internet → ", "First internet connection → ") + dest);
             }
             catch { }
         });
         if (isNew)
         {
             _knownApps.Add(a.Key);
-            if (Settings.NotifyNewApps) Notify?.Invoke("Aplicație nouă pe internet", $"{a.Name} → {dest}");
+            if (Settings.NotifyNewApps) Notify?.Invoke(L.T("Aplicație nouă pe internet", "New app on the internet"), $"{a.Name} → {dest}");
         }
     }
 
@@ -379,7 +379,7 @@ public sealed class Engine : IDisposable
                 Native.KillTcp(c.Row);
             }
         }
-        if (r.Kind == "app") try { Db?.AddEvent("block", r.AppPath?.ToLowerInvariant(), "Aplicație blocată"); } catch { }
+        if (r.Kind == "app") try { Db?.AddEvent("block", r.AppPath?.ToLowerInvariant(), L.T("Aplicație blocată", "App blocked")); } catch { }
     }
 
     static bool PortIn(string spec, int port)
@@ -400,7 +400,7 @@ public sealed class Engine : IDisposable
         lock (_state) app = _apps.TryGetValue(key, out var s) ? s.App : _procs.ByKey(key);
         var path = app?.Path ?? key;
         Rules.SetAppBlocked(path, app?.Name ?? Path.GetFileName(path), block);
-        if (!block) try { Db?.AddEvent("unblock", key, "Aplicație deblocată"); } catch { }
+        if (!block) try { Db?.AddEvent("unblock", key, L.T("Aplicație deblocată", "App unblocked")); } catch { }
     }
 
     public bool KillConn(string id)
@@ -441,23 +441,23 @@ public sealed class Engine : IDisposable
     public string SwitchBlockEngine(string kind)
     {
         Settings.BlockEngine = kind == "winfw" ? "winfw" : "wfp"; Settings.Save();
-        if (!IsAdmin) return "Necesită administrator.";
+        if (!IsAdmin) return L.T("Necesită administrator.", "Administrator rights required.");
         var old = Rules.Backend;
         if (Settings.BlockEngine == "wfp")
         {
-            if (old is WfpService) return "Folosești deja WFP.";
-            if (!TryWfp()) { RefreshBlockStatus(true); return "WFP nu poate fi pornit: " + WfpError; }
+            if (old is WfpService) return L.T("Folosești deja WFP.", "WFP is already in use.");
+            if (!TryWfp()) { RefreshBlockStatus(true); return L.T("WFP nu poate fi pornit: ", "WFP cannot be started: ") + WfpError; }
         }
         else
         {
-            if (old is FirewallService) return "Folosești deja Windows Firewall.";
+            if (old is FirewallService) return L.T("Folosești deja Windows Firewall.", "Windows Firewall is already in use.");
             Rules.Backend = Fw;
         }
         MigrateFrom(old);
         if (old is WfpService ow) { ow.Dispose(); if (ReferenceEquals(Wfp, ow)) Wfp = null; }
         Rules.RequestSync(null);
         RefreshBlockStatus(true);
-        return "Motorul de blocare este acum " + Rules.Backend.Name + ". Regulile au fost re-aplicate.";
+        return L.T("Motorul de blocare este acum ", "The blocking engine is now ") + Rules.Backend.Name + L.T(". Regulile au fost re-aplicate.", ". Rules have been re-applied.");
     }
 
     public void RefreshBlockStatus(bool force = false)
@@ -470,34 +470,37 @@ public sealed class Engine : IDisposable
         string engine = wfp ? "WFP" : "Windows Firewall";
         if (!IsAdmin)
         {
-            BlockStatus = new { level = "warn", engine, thirdParty = tp, text = "Fără drepturi de administrator – blocarea nu este disponibilă.", banner = (string?)null, canEnableWinFw = false };
+            BlockStatus = new { level = "warn", engine, thirdParty = tp, text = L.T("Fără drepturi de administrator – blocarea nu este disponibilă.", "No administrator rights – blocking is not available."), banner = (string?)null, canEnableWinFw = false };
             return;
         }
         if (wfp)
         {
-            var t = "Blocarea folosește Windows Filtering Platform: funcționează indiferent dacă Windows Firewall e pornit sau nu.";
-            if (tp != null) t += $" Firewall-ul {tp} este activ – sunt compatibile, ambele filtrează.";
+            var t = L.T("Blocarea folosește Windows Filtering Platform: funcționează indiferent dacă Windows Firewall e pornit sau nu.",
+                        "Blocking uses the Windows Filtering Platform: it works whether Windows Firewall is on or off.");
+            if (tp != null) t += L.T($" Firewall-ul {tp} este activ – sunt compatibile, ambele filtrează.", $" The {tp} firewall is active – they are compatible and both filter traffic.");
             BlockStatus = new { level = "ok", engine, thirdParty = tp, text = t, banner = (string?)null, canEnableWinFw = false };
             return;
         }
-        string extra = WfpError != null && Settings.BlockEngine != "winfw" ? " (WFP indisponibil: " + WfpError + ")" : "";
+        string extra = WfpError != null && Settings.BlockEngine != "winfw" ? L.T(" (WFP indisponibil: ", " (WFP unavailable: ") + WfpError + ")" : "";
         if (off == null)
-            BlockStatus = new { level = "bad", engine, thirdParty = tp, text = "Nu pot accesa Windows Firewall." + extra, banner = (string?)"Nu pot accesa Windows Firewall – blocările s-ar putea să nu aibă efect." + extra, canEnableWinFw = false };
+            BlockStatus = new { level = "bad", engine, thirdParty = tp, text = L.T("Nu pot accesa Windows Firewall.", "Cannot access Windows Firewall.") + extra,
+                banner = (string?)L.T("Nu pot accesa Windows Firewall – blocările s-ar putea să nu aibă efect.", "Cannot access Windows Firewall – blocks may have no effect.") + extra, canEnableWinFw = false };
         else if (off.Count > 0 && tp != null)
-            BlockStatus = new { level = "bad", engine, thirdParty = tp, text = $"Firewall-ul {tp} a preluat rolul lui Windows Firewall." + extra,
-                banner = (string?)$"Firewall-ul {tp} este activ și Windows Firewall e oprit, așa că blocările FallenSec prin Windows Firewall nu au efect. Treci motorul de blocare pe WFP (Setări) – funcționează împreună cu {tp}." + extra, canEnableWinFw = false };
+            BlockStatus = new { level = "bad", engine, thirdParty = tp, text = L.T($"Firewall-ul {tp} a preluat rolul lui Windows Firewall.", $"The {tp} firewall has taken over from Windows Firewall.") + extra,
+                banner = (string?)L.T($"Firewall-ul {tp} este activ și Windows Firewall e oprit, așa că blocările FallenSec prin Windows Firewall nu au efect. Treci motorul de blocare pe WFP (Setări) – funcționează împreună cu {tp}.",
+                                      $"The {tp} firewall is active and Windows Firewall is off, so FallenSec blocks through Windows Firewall have no effect. Switch the blocking engine to WFP (Settings) – it works alongside {tp}.") + extra, canEnableWinFw = false };
         else if (off.Count > 0)
-            BlockStatus = new { level = "bad", engine, thirdParty = tp, text = "Windows Firewall este oprit pe: " + string.Join(", ", off) + extra,
-                banner = (string?)"Windows Firewall este oprit pe profilul: " + string.Join(", ", off) + ". Blocările nu au efect acolo." + extra, canEnableWinFw = true };
+            BlockStatus = new { level = "bad", engine, thirdParty = tp, text = L.T("Windows Firewall este oprit pe: ", "Windows Firewall is off for: ") + string.Join(", ", off) + extra,
+                banner = (string?)L.T("Windows Firewall este oprit pe profilul: ", "Windows Firewall is off for profile: ") + string.Join(", ", off) + L.T(". Blocările nu au efect acolo.", ". Blocks have no effect there.") + extra, canEnableWinFw = true };
         else
-            BlockStatus = new { level = "ok", engine, thirdParty = tp, text = "Blocarea folosește Windows Firewall (activ pe toate profilurile)." + extra, banner = (string?)null, canEnableWinFw = false };
+            BlockStatus = new { level = "ok", engine, thirdParty = tp, text = L.T("Blocarea folosește Windows Firewall (activ pe toate profilurile).", "Blocking uses Windows Firewall (on for all profiles).") + extra, banner = (string?)null, canEnableWinFw = false };
     }
 
     public void SetPanic(bool on)
     {
         Settings.Panic = on; Settings.Save();
         Rules.SetPanic(on);
-        try { Db?.AddEvent(on ? "panic_on" : "panic_off", null, on ? "Internet tăiat (buton panică)" : "Internet restabilit"); } catch { }
+        try { Db?.AddEvent(on ? "panic_on" : "panic_off", null, on ? L.T("Internet tăiat (buton panică)", "Internet cut off (panic button)") : L.T("Internet restabilit", "Internet restored")); } catch { }
     }
 
     public object AppList()

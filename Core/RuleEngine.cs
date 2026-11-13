@@ -126,20 +126,21 @@ public sealed class RuleEngine
         {
             case "domain":
                 r.Value = r.Value?.ToLowerInvariant().TrimEnd('.');
-                if (r.Value == null || !DomainRx.IsMatch(r.Value)) throw new ArgumentException("Domeniu invalid (ex: facebook.com)");
+                if (r.Value == null || !DomainRx.IsMatch(r.Value)) throw new ArgumentException(L.T("Domeniu invalid (ex: facebook.com)", "Invalid domain (e.g. facebook.com)"));
                 if (r.Value.StartsWith("*.")) r.Value = r.Value[2..];
                 break;
             case "country":
                 r.Value = r.Value?.ToUpperInvariant();
-                if (r.Value == null || r.Value.Length != 2) throw new ArgumentException("Alege o țară");
+                if (r.Value == null || r.Value.Length != 2) throw new ArgumentException(L.T("Alege o țară", "Choose a country"));
                 break;
             case "ip":
-                if (string.IsNullOrWhiteSpace(r.Value)) throw new ArgumentException("Introdu un IP, CIDR sau interval");
+                if (string.IsNullOrWhiteSpace(r.Value)) throw new ArgumentException(L.T("Introdu un IP, CIDR sau interval", "Enter an IP, CIDR or range"));
                 r.Value = string.Join(",", r.Value.Split(new[] { ',', ';', ' ', '\n' }, StringSplitOptions.RemoveEmptyEntries));
                 break;
         }
         if (r.Kind == "custom" && r.AppPath == null && r.Target == "any" && r.Ports == null)
-            throw new ArgumentException("O regulă pentru toate aplicațiile trebuie să aibă o destinație sau porturi (altfel taie tot internetul – folosește butonul de panică).");
+            throw new ArgumentException(L.T("O regulă pentru toate aplicațiile trebuie să aibă o destinație sau porturi (altfel taie tot internetul – folosește butonul de panică).",
+                "A rule for all apps needs a destination or ports (otherwise it would cut off all internet access – use the panic button for that)."));
     }
 
     // ---------- domenii ----------
@@ -272,7 +273,7 @@ public sealed class RuleEngine
         }
         catch (Exception e)
         {
-            LastError = "Sincronizare reguli eșuată (" + _fw.Name + "): " + e.Message;
+            LastError = L.T("Sincronizare reguli eșuată (", "Rule sync failed (") + _fw.Name + "): " + e.Message;
             Log.W(LastError);
         }
         Changed?.Invoke();
@@ -302,7 +303,7 @@ public sealed class RuleEngine
                 break;
             case "country":
                 var ranges = _geo.CountryRanges(r.Value!);
-                if (ranges.Count == 0) throw new Exception("Nu am intervale IP pentru țara " + r.Value + " (baza geo lipsește?)");
+                if (ranges.Count == 0) throw new Exception(L.T("Nu am intervale IP pentru țara ", "No IP ranges for country ") + r.Value + L.T(" (baza geo lipsește?)", " (is the geo database missing?)"));
                 addrChunks = Chunk(ranges, 1000);
                 break;
             default: addrChunks = new() { null }; break;

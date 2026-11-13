@@ -4,7 +4,7 @@ A Little Snitch-style firewall and network monitor for Windows 10/11.
 
 See every connection your PC makes on a live world map, cut any app off the internet with one switch, and write detailed block rules by domain, IP, country or port.
 
-> The interface is in **Romanian**.
+> The interface is available in **English** and **Romanian** (it follows the Windows language and can be changed in Settings).
 
 ## Features
 

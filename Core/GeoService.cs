@@ -8,7 +8,7 @@ namespace FallenSec.Core;
 
 public sealed record GeoInfo(string Cc, string Country, string? City, double Lat, double Lon)
 {
-    public static readonly GeoInfo Lan = new("LAN", "Rețea locală", null, double.NaN, double.NaN);
+    public static readonly GeoInfo Lan = new("LAN", L.T("Rețea locală", "Local network"), null, double.NaN, double.NaN);
     public static readonly GeoInfo None = new("", "", null, double.NaN, double.NaN);
 }
 
@@ -18,7 +18,7 @@ public sealed class GeoService : IDisposable
     Reader? _city;
     readonly ConcurrentDictionary<IPAddress, GeoInfo> _cache = new();
     readonly ConcurrentDictionary<string, List<string>> _rangeCache = new();
-    public string Status { get; private set; } = "Inițializare...";
+    public string Status { get; private set; } = L.T("Inițializare...", "Initializing...");
     public bool Ready => _city != null;
     public event Action? Changed;
 
@@ -38,11 +38,11 @@ public sealed class GeoService : IDisposable
                 Open();
             }
             else if (!File.Exists(CountryFile)) await DownloadAsync("country", CountryFile);
-            Status = Ready ? "Bază geo DB-IP încărcată (" + File.GetLastWriteTime(CityFile).ToString("MMM yyyy") + ")" : Status;
+            Status = Ready ? L.T("Bază geo DB-IP încărcată (", "DB-IP geo database loaded (") + File.GetLastWriteTime(CityFile).ToString("MMM yyyy", System.Globalization.CultureInfo.GetCultureInfo(L.En ? "en-GB" : "ro-RO")) + ")" : Status;
         }
         catch (Exception e)
         {
-            Status = "Geo indisponibil: " + e.Message;
+            Status = L.T("Geo indisponibil: ", "Geo unavailable: ") + e.Message;
             Log.W(Status);
         }
         Changed?.Invoke();
@@ -85,7 +85,7 @@ public sealed class GeoService : IDisposable
             }
             catch (Exception e) { Log.W($"Geo download {url}: {e.Message}"); }
         }
-        throw new Exception("nu am putut descărca baza DB-IP");
+        throw new Exception(L.T("nu am putut descărca baza DB-IP", "could not download the DB-IP database"));
     }
 
     public GeoInfo Lookup(IPAddress ip)

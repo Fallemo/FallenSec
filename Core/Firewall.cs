@@ -87,8 +87,8 @@ public sealed class FirewallService : IBlockBackend
         {
             var p = Policy();
             var off = new List<string>();
-            if (!(bool)p.FirewallEnabled[1]) off.Add("Domeniu");
-            if (!(bool)p.FirewallEnabled[2]) off.Add("Privat");
+            if (!(bool)p.FirewallEnabled[1]) off.Add(L.T("Domeniu", "Domain"));
+            if (!(bool)p.FirewallEnabled[2]) off.Add(L.T("Privat", "Private"));
             if (!(bool)p.FirewallEnabled[4]) off.Add("Public");
             return off;
         }
@@ -122,12 +122,12 @@ public sealed class FirewallService : IBlockBackend
         {
             var p = Policy();
             var off = new List<string>();
-            if (!(bool)p.FirewallEnabled[1]) off.Add("Domeniu");
-            if (!(bool)p.FirewallEnabled[2]) off.Add("Privat");
+            if (!(bool)p.FirewallEnabled[1]) off.Add(L.T("Domeniu", "Domain"));
+            if (!(bool)p.FirewallEnabled[2]) off.Add(L.T("Privat", "Private"));
             if (!(bool)p.FirewallEnabled[4]) off.Add("Public");
-            return off.Count == 0 ? null : "Windows Firewall este oprit pe profilul: " + string.Join(", ", off) + ". Blocările nu au efect acolo.";
+            return off.Count == 0 ? null : L.T("Windows Firewall este oprit pe profilul: ", "Windows Firewall is off for profile: ") + string.Join(", ", off) + L.T(". Blocările nu au efect acolo.", ". Blocks have no effect there.");
         }
-        catch (Exception e) { return "Nu pot accesa Windows Firewall: " + e.Message; }
+        catch (Exception e) { return L.T("Nu pot accesa Windows Firewall: ", "Cannot access Windows Firewall: ") + e.Message; }
     }
 
     public void EnableAllProfiles()

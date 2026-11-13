@@ -1,4 +1,4 @@
-﻿FallenSec v1.1 - Firewall și monitor de rețea pentru Windows
+﻿FallenSec v1.2 - Firewall și monitor de rețea pentru Windows
 © 2026 Fallen
 =============================================================
 
@@ -59,6 +59,11 @@ Hartă: Natural Earth / world-atlas. Grafice: d3.js.
 
 ISTORIC VERSIUNI
 ----------------
+v1.2 (13.11.2026)
+- Interfață în engleză și română. Limba se alege automat după Windows
+  și se poate schimba din Setări > General > Limba.
+- Notificările, meniul din tray și mesajele de stare sunt traduse.
+
 v1.1 (08.11.2026)
 - Blocare direct prin Windows Filtering Platform: merge și când Windows
   Firewall e oprit (ex. Bitdefender, ESET, Kaspersky). Regulile din v1.0

@@ -5,43 +5,64 @@ const host = window.chrome && window.chrome.webview;
 const DEMO = !host;
 function send(o) { if (host) host.postMessage(o); else demoHandle(o); }
 
+// ---------------------------------------------------------------- language (ro / en)
+const LANG = (() => {
+  const q = new URLSearchParams(location.search).get('lang');
+  if (q === 'ro' || q === 'en') return q;
+  return (navigator.language || '').toLowerCase().startsWith('ro') ? 'ro' : 'en';
+})();
+const EN = LANG === 'en';
+const tr = (ro, en) => EN ? en : ro;
+const LOCALE = EN ? 'en-GB' : 'ro-RO';
+document.documentElement.lang = LANG;
+if (EN) {
+  $$('[data-en]').forEach(e => e.textContent = e.dataset.en);
+  $$('[data-en-ph]').forEach(e => e.placeholder = e.dataset.enPh);
+  $$('[data-en-title]').forEach(e => e.title = e.dataset.enTitle);
+}
+
 const CHANGELOG = [
+  { v: '1.2', d: '13.11.2026', items: [
+    ['Interfață în engleză și română: limba se alege automat după Windows și se poate schimba din Setări → General', 'English and Romanian interface: the language follows Windows and can be changed in Settings → General'],
+    ['Notificările, meniul din tray și mesajele de stare sunt traduse și ele', 'Notifications, the tray menu and status messages are translated too'],
+  ]},
   { v: '1.1', d: '08.11.2026', items: [
-    'Blocare nouă direct prin Windows Filtering Platform (WFP): funcționează și când Windows Firewall e oprit, inclusiv alături de Bitdefender, ESET, Kaspersky și alte firewall-uri',
-    'Filtrele WFP sunt persistente: blocările rămân active după închiderea aplicației și după repornirea PC-ului',
-    'Regulile din v1.0 (Windows Firewall) sunt mutate automat în WFP; motorul vechi rămâne disponibil în Setări → Blocare',
-    'Detectează firewall-urile terțe active și explică exact ce se întâmplă cu blocarea',
-    'Hartă: cifrele de sus (conexiuni, aplicații, țări, locații) sunt clickabile și deschid liste detaliate',
-    'Hartă: click pe o țară sau locație din listă face zoom pe hartă și arată aplicațiile și conexiunile de acolo, cu buton Înapoi',
-    'Aplicații: sortare după orice coloană, prin click pe capul de tabel (încă un click inversează ordinea)',
-    'Conexiuni: filtru Toate / Internet / LAN, cu numărul de conexiuni pe fiecare buton',
-    'Indicator de sortare (▴/▾) pe coloana activă',
+    ['Blocare nouă direct prin Windows Filtering Platform (WFP): funcționează și când Windows Firewall e oprit, inclusiv alături de Bitdefender, ESET, Kaspersky și alte firewall-uri', 'New blocking engine built directly on the Windows Filtering Platform (WFP): it works even when Windows Firewall is off, including alongside Bitdefender, ESET, Kaspersky and other firewalls'],
+    ['Filtrele WFP sunt persistente: blocările rămân active după închiderea aplicației și după repornirea PC-ului', 'WFP filters are persistent: blocks stay active after the app is closed and after a reboot'],
+    ['Regulile din v1.0 (Windows Firewall) sunt mutate automat în WFP; motorul vechi rămâne disponibil în Setări → Blocare', 'Rules from v1.0 (Windows Firewall) are moved to WFP automatically; the old engine is still available in Settings → Blocking'],
+    ['Detectează firewall-urile terțe active și explică exact ce se întâmplă cu blocarea', 'Detects active third-party firewalls and explains exactly how they affect blocking'],
+    ['Hartă: cifrele de sus (conexiuni, aplicații, țări, locații) sunt clickabile și deschid liste detaliate', 'Map: the counters at the top (connections, apps, countries, locations) are clickable and open detailed lists'],
+    ['Hartă: click pe o țară sau locație din listă face zoom pe hartă și arată aplicațiile și conexiunile de acolo, cu buton Înapoi', 'Map: clicking a country or location in the list zooms the map and shows the apps and connections there, with a Back button'],
+    ['Aplicații: sortare după orice coloană, prin click pe capul de tabel (încă un click inversează ordinea)', 'Apps: sort by any column by clicking its header (click again to reverse the order)'],
+    ['Conexiuni: filtru Toate / Internet / LAN, cu numărul de conexiuni pe fiecare buton', 'Connections: All / Internet / LAN filter, with the connection count on each button'],
+    ['Indicator de sortare (▴/▾) pe coloana activă', 'Sort indicator (▴/▾) on the active column'],
   ]},
   { v: '1.0', d: '08.11.2026', items: [
-    'Prima versiune FallenSec',
-    'Hartă a lumii cu toate conexiunile live: arce animate de la tine către fiecare destinație',
-    'Listă de aplicații cu viteze ↓/↑ în timp real, conexiuni, țări și slider de internet ON/OFF',
-    'Blocarea taie instant și conexiunile TCP deja deschise',
-    'Tabel de conexiuni: proces, port, domeniu (din DNS), IP, oraș, țară, stare, viteze',
-    'Reguli detaliate: per aplicație sau pentru toate, pe IP/CIDR, domeniu (cu subdomenii), țară, porturi, protocol, direcție',
-    'Istoric cu grafice: trafic în timp, top aplicații, țări, destinații, porturi și jurnal de evenimente',
-    'Notificare când o aplicație iese pentru prima dată pe internet',
-    'Buton de panică: taie tot internetul, LAN-ul rămâne funcțional',
-    'Pornire cu Windows, geolocalizare offline DB-IP',
-    'Iconiță în system tray: minimizarea și închiderea ascund aplicația lângă ceas, buton „Tray” în bara de sus, meniu cu Deschide / Panică / Ieșire și vitezele live în tooltip',
+    ['Prima versiune FallenSec', 'First FallenSec release'],
+    ['Hartă a lumii cu toate conexiunile live: arce animate de la tine către fiecare destinație', 'World map of all live connections: animated arcs from you to every destination'],
+    ['Listă de aplicații cu viteze ↓/↑ în timp real, conexiuni, țări și slider de internet ON/OFF', 'App list with real-time ↓/↑ speeds, connections, countries and an Internet ON/OFF switch'],
+    ['Blocarea taie instant și conexiunile TCP deja deschise', 'Blocking also cuts TCP connections that are already open'],
+    ['Tabel de conexiuni: proces, port, domeniu (din DNS), IP, oraș, țară, stare, viteze', 'Connections table: process, port, domain (from DNS), IP, city, country, state, speeds'],
+    ['Reguli detaliate: per aplicație sau pentru toate, pe IP/CIDR, domeniu (cu subdomenii), țară, porturi, protocol, direcție', 'Detailed rules, per app or for all apps: IP/CIDR, domain (with subdomains), country, ports, protocol, direction'],
+    ['Istoric cu grafice: trafic în timp, top aplicații, țări, destinații, porturi și jurnal de evenimente', 'History with charts: traffic over time, top apps, countries, destinations, ports and an event log'],
+    ['Notificare când o aplicație iese pentru prima dată pe internet', 'Notification when an app goes online for the first time'],
+    ['Buton de panică: taie tot internetul, LAN-ul rămâne funcțional', 'Panic button: cuts all internet traffic while the LAN keeps working'],
+    ['Pornire cu Windows, geolocalizare offline DB-IP', 'Start with Windows, offline DB-IP geolocation'],
+    ['Iconiță în system tray: minimizarea și închiderea ascund aplicația lângă ceas, buton „Tray” în bara de sus, meniu cu Deschide / Panică / Ieșire și vitezele live în tooltip', 'System tray icon: minimizing or closing hides the app next to the clock, a "Tray" button in the top bar, a menu with Open / Panic / Exit and live speeds in the tooltip'],
   ]},
 ];
 
 const COUNTRY_CODES = 'AD AE AF AG AI AL AM AO AQ AR AS AT AU AW AX AZ BA BB BD BE BF BG BH BI BJ BL BM BN BO BQ BR BS BT BV BW BY BZ CA CC CD CF CG CH CI CK CL CM CN CO CR CU CV CW CX CY CZ DE DJ DK DM DO DZ EC EE EG EH ER ES ET FI FJ FK FM FO FR GA GB GD GE GF GG GH GI GL GM GN GP GQ GR GS GT GU GW GY HK HM HN HR HT HU ID IE IL IM IN IO IQ IR IS IT JE JM JO JP KE KG KH KI KM KN KP KR KW KY KZ LA LB LC LI LK LR LS LT LU LV LY MA MC MD ME MF MG MH MK ML MM MN MO MP MQ MR MS MT MU MV MW MX MY MZ NA NC NE NF NG NI NL NO NP NR NU NZ OM PA PE PF PG PH PK PL PM PN PR PS PT PW PY QA RE RO RS RU RW SA SB SC SD SE SG SH SI SJ SK SL SM SN SO SR SS ST SV SX SY SZ TC TD TF TG TH TJ TK TL TM TN TO TR TT TV TW TZ UA UG UM US UY UZ VA VC VE VG VI VN VU WF WS XK YE YT ZA ZM ZW'.split(' ');
 const PORTS = { 20: 'FTP', 21: 'FTP', 22: 'SSH', 23: 'Telnet', 25: 'SMTP', 53: 'DNS', 67: 'DHCP', 68: 'DHCP', 80: 'HTTP', 110: 'POP3', 123: 'NTP', 137: 'NetBIOS', 138: 'NetBIOS', 143: 'IMAP', 443: 'HTTPS', 445: 'SMB', 465: 'SMTPS', 587: 'SMTP', 853: 'DNS/TLS', 993: 'IMAPS', 995: 'POP3S', 1900: 'SSDP', 3389: 'RDP', 3478: 'STUN', 5228: 'Google Push', 5353: 'mDNS', 5355: 'LLMNR', 8080: 'HTTP-alt', 8443: 'HTTPS-alt', 27017: 'MongoDB', 3306: 'MySQL' };
 
-let regionNames; try { regionNames = new Intl.DisplayNames(['ro'], { type: 'region' }); } catch { }
-const ccName = cc => { if (!cc) return ''; if (cc === 'LAN') return 'Rețea locală'; try { return regionNames ? regionNames.of(cc) : cc; } catch { return cc; } };
+let regionNames; try { regionNames = new Intl.DisplayNames([LANG], { type: 'region' }); } catch { }
+const LAN_NAME = tr('Rețea locală', 'Local network');
+const ccName = cc => { if (!cc) return ''; if (cc === 'LAN') return LAN_NAME; try { return regionNames ? regionNames.of(cc) : cc; } catch { return cc; } };
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 function fmtB(b) { b = +b || 0; if (b < 1) return '0 B'; const u = ['B', 'KB', 'MB', 'GB', 'TB']; let i = 0; while (b >= 1024 && i < 4) { b /= 1024; i++; } return (i ? b.toFixed(b < 10 ? 1 : 0) : Math.round(b)) + ' ' + u[i]; }
 const fmtR = b => fmtB(b) + '/s';
-function fmtDur(s) { if (s < 60) return s + 's'; if (s < 3600) return Math.floor(s / 60) + 'm ' + (s % 60) + 's'; const h = Math.floor(s / 3600); return h < 48 ? h + 'h ' + Math.floor(s % 3600 / 60) + 'm' : Math.floor(h / 24) + 'z ' + (h % 24) + 'h'; }
-function fmtTime(ts) { const d = new Date(ts * 1000); return d.toLocaleString('ro-RO', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }); }
+function fmtDur(s) { if (s < 60) return s + 's'; if (s < 3600) return Math.floor(s / 60) + 'm ' + (s % 60) + 's'; const h = Math.floor(s / 3600); return h < 48 ? h + 'h ' + Math.floor(s % 3600 / 60) + 'm' : Math.floor(h / 24) + tr('z ', 'd ') + (h % 24) + 'h'; }
+function fmtTime(ts) { const d = new Date(ts * 1000); return d.toLocaleString(LOCALE, { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }); }
 const ccBadge = cc => cc ? `<span class="cc ${cc === 'LAN' ? 'lan' : ''}" title="${esc(ccName(cc))}">${esc(cc)}</span>` : '';
 const DEFAULT_ICON = 'data:image/svg+xml;utf8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#56638a" stroke-width="1.6"><rect x="3" y="4" width="18" height="16" rx="2.5"/><path d="M3 8.5h18"/><circle cx="6" cy="6.3" r=".6" fill="#56638a"/></svg>');
 const SYS_ICON = 'data:image/svg+xml;utf8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="#3b82f6" d="M3 5.5 10.5 4.4v7.1H3zm8.5-1.2L21 3v8.5h-9.5zM3 12.5h7.5v7.1L3 18.5zm8.5 0H21V21l-9.5-1.3z"/></svg>');
@@ -58,7 +79,7 @@ const SVG = {
 
 const S = {
   apps: [], appMap: new Map(), conns: [], frozen: null, status: {}, home: null, hist: [], up: 0, down: 0,
-  rules: [], settings: {}, version: '1.1', view: 'map', icons: new Map(), expanded: new Set(),
+  rules: [], settings: {}, version: '1.2', view: 'map', icons: new Map(), expanded: new Set(),
   mapSel: null, mapApp: null, appFilter: 'all', appSort: { k: 'rate', d: -1 }, connProto: 'all', connNet: 'all', connSort: { k: 'down', d: -1 },
   histHours: 24, histApp: '', history: null, appList: [],
 };
@@ -117,7 +138,9 @@ function renderView() {
 }
 
 // ---------------------------------------------------------------- navigation
-const TITLES = { map: 'Harta conexiunilor', apps: 'Aplicații', conns: 'Conexiuni', history: 'Istoric', rules: 'Reguli', settings: 'Setări', about: 'Despre' };
+const TITLES = EN
+  ? { map: 'Connection map', apps: 'Apps', conns: 'Connections', history: 'History', rules: 'Rules', settings: 'Settings', about: 'About' }
+  : { map: 'Harta conexiunilor', apps: 'Aplicații', conns: 'Conexiuni', history: 'Istoric', rules: 'Reguli', settings: 'Setări', about: 'Despre' };
 function go(view) {
   S.view = view;
   $$('#nav a').forEach(a => a.classList.toggle('active', a.dataset.view === view));
@@ -145,27 +168,27 @@ function updateChrome() {
   const st = S.status || {};
   const chip = (cls, txt, title) => `<span class="chip ${cls}" title="${esc(title || '')}"><i></i>${txt}</span>`;
   const chips = [
-    chip(st.admin ? 'ok' : 'bad', 'Admin', st.admin ? 'Rulează ca administrator' : 'Nu rulează ca administrator'),
-    chip(st.etw ? 'ok' : 'bad', 'Trafic', st.etw ? 'Monitorizare trafic ETW activă' : (st.etwError || 'ETW inactiv')),
-    chip(st.dns ? 'ok' : 'warn', 'DNS', st.dns ? 'Numele domeniilor sunt preluate din DNS' : 'Monitorizare DNS inactivă'),
+    chip(st.admin ? 'ok' : 'bad', 'Admin', st.admin ? tr('Rulează ca administrator', 'Running as administrator') : tr('Nu rulează ca administrator', 'Not running as administrator')),
+    chip(st.etw ? 'ok' : 'bad', tr('Trafic', 'Traffic'), st.etw ? tr('Monitorizare trafic ETW activă', 'ETW traffic monitoring active') : (st.etwError || tr('ETW inactiv', 'ETW inactive'))),
+    chip(st.dns ? 'ok' : 'warn', 'DNS', st.dns ? tr('Numele domeniilor sunt preluate din DNS', 'Domain names are taken from DNS') : tr('Monitorizare DNS inactivă', 'DNS monitoring inactive')),
     chip(st.geoReady ? 'ok' : 'warn', 'Geo', st.geo),
-    chip(st.block?.level || 'warn', 'Blocare' + (st.block?.engine ? ': ' + (st.block.engine === 'WFP' ? 'WFP' : 'WinFW') : ''), st.block?.text || ''),
+    chip(st.block?.level || 'warn', tr('Blocare', 'Blocking') + (st.block?.engine ? ': ' + (st.block.engine === 'WFP' ? 'WFP' : 'WinFW') : ''), st.block?.text || ''),
   ].join('');
   if (chips !== lastChips) { $('#chips').innerHTML = chips; lastChips = chips; }
 
   const b = [];
-  if (st.panic) b.push(`<div class="banner err"><b>Internetul este tăiat.</b> Toate conexiunile către internet sunt blocate (LAN-ul funcționează). <button class="btn danger sm" data-act="panicOff">Restabilește internetul</button></div>`);
-  if (st.admin === false) b.push(`<div class="banner err">FallenSec nu rulează ca administrator — blocarea, regulile și vitezele sunt dezactivate. Repornește aplicația cu „Run as administrator”.</div>`);
-  if (st.block?.banner) b.push(`<div class="banner warn">${esc(st.block.banner)} ${st.block.canEnableWinFw ? '<button class="btn sm" data-act="enableFw">Pornește Windows Firewall</button>' : ''}${st.block.engine !== 'WFP' ? ' <button class="btn sm" data-act="useWfp">Folosește WFP</button>' : ''}</div>`);
+  if (st.panic) b.push(`<div class="banner err"><b>${tr('Internetul este tăiat.', 'Internet is cut off.')}</b> ${tr('Toate conexiunile către internet sunt blocate (LAN-ul funcționează).', 'All internet connections are blocked (the LAN still works).')} <button class="btn danger sm" data-act="panicOff">${tr('Restabilește internetul', 'Restore internet')}</button></div>`);
+  if (st.admin === false) b.push(`<div class="banner err">${tr('FallenSec nu rulează ca administrator — blocarea, regulile și vitezele sunt dezactivate. Repornește aplicația cu „Run as administrator”.', 'FallenSec is not running as administrator — blocking, rules and speeds are disabled. Restart the app with "Run as administrator".')}</div>`);
+  if (st.block?.banner) b.push(`<div class="banner warn">${esc(st.block.banner)} ${st.block.canEnableWinFw ? `<button class="btn sm" data-act="enableFw">${tr('Pornește Windows Firewall', 'Turn on Windows Firewall')}</button>` : ''}${st.block.engine !== 'WFP' ? ` <button class="btn sm" data-act="useWfp">${tr('Folosește WFP', 'Use WFP')}</button>` : ''}</div>`);
   if (st.admin && st.etwError) b.push(`<div class="banner warn">${esc(st.etwError)}</div>`);
   if (st.rules) b.push(`<div class="banner err">${esc(st.rules)}</div>`);
-  if (st.geo && !st.geoReady) b.push(`<div class="banner info">${esc(st.geo)} — harta se va popula după descărcarea bazei de geolocalizare.</div>`);
+  if (st.geo && !st.geoReady) b.push(`<div class="banner info">${esc(st.geo)} — ${tr('harta se va popula după descărcarea bazei de geolocalizare.', 'the map will fill in once the geolocation database is downloaded.')}</div>`);
   const bs = b.join('');
   if (bs !== lastBanners) { $('#banners').innerHTML = bs; lastBanners = bs; }
 
   const pb = $('#panicBtn');
   pb.classList.toggle('on', !!st.panic);
-  $('#panicTxt').textContent = st.panic ? 'Internet TĂIAT' : 'Taie internetul';
+  $('#panicTxt').textContent = st.panic ? tr('Internet TĂIAT', 'Internet CUT') : tr('Taie internetul', 'Cut internet');
   const bi = $('#blockInfo'); if (bi && st.block && bi.textContent !== st.block.text) bi.textContent = st.block.text;
   drawSpark();
   updateBadges();
@@ -184,7 +207,7 @@ $('#banners').addEventListener('click', e => {
 $('#toTray').onclick = () => send({ cmd: 'hideToTray' });
 $('#panicBtn').onclick = () => {
   if (S.status.panic) { send({ cmd: 'panic', on: false }); return; }
-  confirmBox('Tai tot internetul?', 'Toate aplicațiile vor pierde instant accesul la internet (inclusiv browserul). Rețeaua locală rămâne funcțională. Poți restabili oricând din același buton sau din iconița din tray.', 'Taie internetul', () => send({ cmd: 'panic', on: true }), true);
+  confirmBox(tr('Tai tot internetul?', 'Cut off all internet access?'), tr('Toate aplicațiile vor pierde instant accesul la internet (inclusiv browserul). Rețeaua locală rămâne funcțională. Poți restabili oricând din același buton sau din iconița din tray.', 'Every app loses internet access instantly (the browser too). The local network keeps working. You can restore it at any time from the same button or from the tray icon.'), tr('Taie internetul', 'Cut internet'), () => send({ cmd: 'panic', on: true }), true);
 };
 
 function drawSpark() {
@@ -235,17 +258,17 @@ function renderApps() {
   }[sk] || rate;
   list.sort((a, b) => {
     const x = val(a), y = val(b);
-    const c = typeof x === 'string' ? x.localeCompare(y, 'ro') : x - y;
+    const c = typeof x === 'string' ? x.localeCompare(y, LANG) : x - y;
     return c * sd || rate(b) - rate(a) || b.conns - a.conns || tot(b) - tot(a) || a.name.localeCompare(b.name);
   });
   sortMark('#appsTable', S.appSort);
-  $('#appCount').textContent = `${list.length} aplicații`;
+  $('#appCount').textContent = plural(list.length, tr('aplicație', 'app'), tr('aplicații', 'apps'));
   const maxD = d3.max(list, a => a.down) || 0, maxU = d3.max(list, a => a.up) || 0;
   const rows = list.map(a => {
     const exp = S.expanded.has(a.key);
     const cs = a.countries.filter(c => c !== 'LAN');
-    const tags = (a.blocked ? '<span class="tag red">BLOCAT</span>' : '') + (a.rules ? '<span class="tag amber">reguli</span>' : '') +
-      (a.sys ? '<span class="tag">sistem</span>' : '') + (a.listen.length ? `<span class="tag cyan" title="${esc(a.listen.join(', '))}">ascultă ${a.listen.length}</span>` : '');
+    const tags = (a.blocked ? `<span class="tag red">${tr('BLOCAT', 'BLOCKED')}</span>` : '') + (a.rules ? `<span class="tag amber">${tr('reguli', 'rules')}</span>` : '') +
+      (a.sys ? `<span class="tag">${tr('sistem', 'system')}</span>` : '') + (a.listen.length ? `<span class="tag cyan" title="${esc(a.listen.join(', '))}">${tr('ascultă', 'listening')} ${a.listen.length}</span>` : '');
     let html = `<tr class="${a.blocked ? 'blocked' : ''} ${a.conns === 0 && !a.blocked ? 'inactive' : ''}" data-key="${esc(a.key)}">
       <td style="width:34px"><button class="icon-btn" data-act="expand">${exp ? SVG.chevD : SVG.chev}</button></td>
       <td><div class="app-cell"><img class="app-ico" src="${icon(a.key)}"><div class="app-txt"><div class="appname">${esc(a.name)}${tags}</div><div class="apppath" title="${esc(a.path)}">${esc(a.publisher ? a.publisher + ' · ' : '')}${esc(a.path)}</div></div></div></td>
@@ -258,24 +281,24 @@ function renderApps() {
     if (exp) html += `<tr class="expand" data-key="${esc(a.key)}"><td colspan="8">${appDetail(a)}</td></tr>`;
     return html;
   });
-  $('#appsTable tbody').innerHTML = rows.join('') || `<tr><td colspan="8" class="empty">${S.apps.length ? 'Nicio aplicație nu corespunde filtrului.' : 'Se încarcă...'}</td></tr>`;
+  $('#appsTable tbody').innerHTML = rows.join('') || `<tr><td colspan="8" class="empty">${S.apps.length ? tr('Nicio aplicație nu corespunde filtrului.', 'No app matches the filter.') : tr('Se încarcă...', 'Loading...')}</td></tr>`;
 }
 function switchHtml(a) {
-  return `<label class="sw ${a.canBlock ? '' : 'disabled'}" title="${a.blocked ? 'Internet BLOCAT — apasă pentru a permite' : 'Internet permis — apasă pentru a bloca'}"><input type="checkbox" data-act="toggle" ${a.blocked ? '' : 'checked'}><span></span></label>`;
+  return `<label class="sw ${a.canBlock ? '' : 'disabled'}" title="${a.blocked ? tr('Internet BLOCAT — apasă pentru a permite', 'Internet BLOCKED — click to allow') : tr('Internet permis — apasă pentru a bloca', 'Internet allowed — click to block')}"><input type="checkbox" data-act="toggle" ${a.blocked ? '' : 'checked'}><span></span></label>`;
 }
 function appDetail(a) {
   const conns = S.conns.filter(c => c.app === a.key);
   const rows = conns.slice(0, 60).map(c => `<tr><td>${ccBadge(c.cc)} ${esc(c.city || ccName(c.cc) || '')}</td><td><span class="host" title="${esc(c.host || '')}">${c.host ? esc(c.host) : '<span class="dim">—</span>'}</span></td>
     <td class="mono dim">${esc(c.ip)}:${c.rport}</td><td>${c.proto}</td><td class="dn">${c.down ? fmtR(c.down) : ''}</td><td class="up">${c.up ? fmtR(c.up) : ''}</td>
-    <td><button class="icon-btn" title="Blochează această destinație" data-act="blockDest" data-id="${esc(c.id)}">${SVG.ban}</button></td></tr>`).join('');
+    <td><button class="icon-btn" title="${tr('Blochează această destinație', 'Block this destination')}" data-act="blockDest" data-id="${esc(c.id)}">${SVG.ban}</button></td></tr>`).join('');
   return `<div class="exp">
     <div class="exp-actions">
-      <button class="btn sm" data-act="reveal">${'Deschide locația'}</button>
-      <button class="btn sm" data-act="ruleFor">Regulă detaliată pentru aplicație</button>
-      <button class="btn sm" data-act="histFor">Istoric aplicație</button>
-      ${a.listen.length ? `<span class="muted" style="align-self:center">Porturi ascultate: <span class="mono">${esc(a.listen.join(', '))}</span></span>` : ''}
+      <button class="btn sm" data-act="reveal">${tr('Deschide locația', 'Open file location')}</button>
+      <button class="btn sm" data-act="ruleFor">${tr('Regulă detaliată pentru aplicație', 'Detailed rule for this app')}</button>
+      <button class="btn sm" data-act="histFor">${tr('Istoric aplicație', 'App history')}</button>
+      ${a.listen.length ? `<span class="muted" style="align-self:center">${tr('Porturi ascultate', 'Listening ports')}: <span class="mono">${esc(a.listen.join(', '))}</span></span>` : ''}
     </div>
-    ${conns.length ? `<table>${rows}</table>${conns.length > 60 ? `<div class="dim">+${conns.length - 60} conexiuni</div>` : ''}` : '<div class="dim">Nicio conexiune activă acum.</div>'}
+    ${conns.length ? `<table>${rows}</table>${conns.length > 60 ? `<div class="dim">+${conns.length - 60} ${tr('conexiuni', 'connections')}</div>` : ''}` : `<div class="dim">${tr('Nicio conexiune activă acum.', 'No active connections right now.')}</div>`}
   </div>`;
 }
 
@@ -288,7 +311,7 @@ function toggleApp(key, allow) {
     schedule();
   };
   if (!allow && (a.sys || key === 'system')) {
-    confirmBox('Blochezi o componentă Windows?', `„${a.name}” face parte din sistem. Blocarea poate opri Windows Update, DNS, sincronizarea orei sau alte servicii. Continui?`, 'Blochează', doIt, true, () => schedule());
+    confirmBox(tr('Blochezi o componentă Windows?', 'Block a Windows component?'), tr(`„${a.name}” face parte din sistem. Blocarea poate opri Windows Update, DNS, sincronizarea orei sau alte servicii. Continui?`, `"${a.name}" is part of the system. Blocking it can stop Windows Update, DNS, time sync or other services. Continue?`), tr('Blochează', 'Block'), doIt, true, () => schedule());
   } else doIt();
 }
 
@@ -327,7 +350,7 @@ function renderConns() {
   const nLan = byProto.filter(isLan).length;
   const cnt = { all: byProto.length, inet: byProto.length - nLan, lan: nLan };
   $$('#connNet button').forEach(b => {
-    const t = { all: 'Toate', inet: 'Internet', lan: 'LAN' }[b.dataset.v];
+    const t = { all: tr('Toate', 'All'), inet: 'Internet', lan: 'LAN' }[b.dataset.v];
     const h = `${t}<span class="n">${cnt[b.dataset.v]}</span>`;
     if (b.innerHTML !== h) b.innerHTML = h;
   });
@@ -344,7 +367,7 @@ function renderConns() {
   }[k];
   list.sort((a, b) => { const x = val(a), y = val(b); return (x < y ? -1 : x > y ? 1 : 0) * d || (b.totUp + b.totDown) - (a.totUp + a.totDown); });
   sortMark('#connsTable', S.connSort);
-  $('#connCount').textContent = `${list.length} conexiuni` + (S.frozen ? ' (pauză)' : '');
+  $('#connCount').textContent = plural(list.length, tr('conexiune', 'connection'), tr('conexiuni', 'connections')) + (S.frozen ? tr(' (pauză)', ' (paused)') : '');
   const shown = list.slice(0, 500);
   $('#connsTable tbody').innerHTML = shown.map(c => {
     const a = S.appMap.get(c.app);
@@ -354,14 +377,14 @@ function renderConns() {
       <td>${c.proto}</td>
       <td><div class="app-txt"><span class="host" title="${esc(c.host || '')}">${esc(c.host || c.ip)}</span>${c.host ? `<span class="mono dim">${esc(c.ip)}</span>` : ''}</div></td>
       <td class="r mono">${c.rport}${svc}</td>
-      <td>${ccBadge(c.cc)} <span class="muted">${esc(c.city || (c.cc === 'LAN' ? 'Rețea locală' : ccName(c.cc)))}</span></td>
+      <td>${ccBadge(c.cc)} <span class="muted">${esc(c.city || ccName(c.cc))}</span></td>
       <td><span class="state ${c.state}">${c.state}</span></td>
       <td class="r dn">${c.down ? fmtR(c.down) : '<span class="dim">—</span>'}</td>
       <td class="r up">${c.up ? fmtR(c.up) : '<span class="dim">—</span>'}</td>
       <td class="r">${fmtB(c.totUp + c.totDown)}</td>
       <td class="r muted">${fmtDur(c.age)}</td>
-      <td style="white-space:nowrap">${c.proto === 'TCP' ? `<button class="icon-btn" title="Închide conexiunea" data-act="kill" data-id="${esc(c.id)}">${SVG.x}</button>` : ''}<button class="icon-btn" title="Blochează..." data-act="blockDest" data-id="${esc(c.id)}">${SVG.ban}</button></td></tr>`;
-  }).join('') || `<tr><td colspan="11" class="empty">Nicio conexiune.</td></tr>`;
+      <td style="white-space:nowrap">${c.proto === 'TCP' ? `<button class="icon-btn" title="${tr('Închide conexiunea', 'Close connection')}" data-act="kill" data-id="${esc(c.id)}">${SVG.x}</button>` : ''}<button class="icon-btn" title="${tr('Blochează...', 'Block...')}" data-act="blockDest" data-id="${esc(c.id)}">${SVG.ban}</button></td></tr>`;
+  }).join('') || `<tr><td colspan="11" class="empty">${tr('Nicio conexiune.', 'No connections.')}</td></tr>`;
 }
 $('#connsTable').addEventListener('click', tableClick);
 
@@ -372,17 +395,17 @@ function blockDestMenu(id) {
   const dest = c.host || c.ip;
   const base = { appPath: canApp ? a.path : null, appName: canApp ? appName : null, direction: 'out' };
   const opts = [
-    canApp && { t: `Blochează IP-ul ${c.ip} doar pentru ${appName}`, r: { ...base, target: 'ip', value: c.ip } },
-    canApp && c.host && { t: `Blochează domeniul ${baseDomain(c.host)} pentru ${appName}`, r: { ...base, target: 'domain', value: baseDomain(c.host) } },
-    canApp && c.cc && c.cc !== 'LAN' && { t: `Blochează toată țara ${ccName(c.cc)} pentru ${appName}`, r: { ...base, target: 'country', value: c.cc } },
-    { t: `Blochează ${c.host ? 'domeniul ' + baseDomain(c.host) : 'IP-ul ' + c.ip} pentru toate aplicațiile`, r: { appPath: null, appName: null, direction: 'out', target: c.host ? 'domain' : 'ip', value: c.host ? baseDomain(c.host) : c.ip } },
-    canApp && { t: `Blochează portul ${c.rport} (${c.proto}) pentru ${appName}`, r: { ...base, target: 'any', protocol: c.proto.toLowerCase(), ports: String(c.rport) } },
-    canApp && !c.blocked && { t: `Taie complet internetul pentru ${appName}`, app: c.app },
+    canApp && { t: tr(`Blochează IP-ul ${c.ip} doar pentru ${appName}`, `Block IP ${c.ip} for ${appName} only`), r: { ...base, target: 'ip', value: c.ip } },
+    canApp && c.host && { t: tr(`Blochează domeniul ${baseDomain(c.host)} pentru ${appName}`, `Block domain ${baseDomain(c.host)} for ${appName}`), r: { ...base, target: 'domain', value: baseDomain(c.host) } },
+    canApp && c.cc && c.cc !== 'LAN' && { t: tr(`Blochează toată țara ${ccName(c.cc)} pentru ${appName}`, `Block the whole country ${ccName(c.cc)} for ${appName}`), r: { ...base, target: 'country', value: c.cc } },
+    { t: c.host ? tr(`Blochează domeniul ${baseDomain(c.host)} pentru toate aplicațiile`, `Block domain ${baseDomain(c.host)} for all apps`) : tr(`Blochează IP-ul ${c.ip} pentru toate aplicațiile`, `Block IP ${c.ip} for all apps`), r: { appPath: null, appName: null, direction: 'out', target: c.host ? 'domain' : 'ip', value: c.host ? baseDomain(c.host) : c.ip } },
+    canApp && { t: tr(`Blochează portul ${c.rport} (${c.proto}) pentru ${appName}`, `Block port ${c.rport} (${c.proto}) for ${appName}`), r: { ...base, target: 'any', protocol: c.proto.toLowerCase(), ports: String(c.rport) } },
+    canApp && !c.blocked && { t: tr(`Taie complet internetul pentru ${appName}`, `Cut off all internet access for ${appName}`), app: c.app },
   ].filter(Boolean);
-  Modal.open(`<h2>Blochează conexiunea</h2>
+  Modal.open(`<h2>${tr('Blochează conexiunea', 'Block connection')}</h2>
     <div class="preview"><b>${esc(appName)}</b> → ${esc(dest)}:${c.rport} ${c.cc ? '(' + esc(c.city ? c.city + ', ' : '') + esc(ccName(c.cc)) + ')' : ''}</div>
     <div style="display:flex;flex-direction:column;gap:8px">${opts.map((o, i) => `<button class="btn" style="text-align:left" data-i="${i}">${esc(o.t)}</button>`).join('')}</div>
-    <div class="modal-actions"><button class="btn ghost" data-close>Renunță</button></div>`);
+    <div class="modal-actions"><button class="btn ghost" data-close>${tr('Renunță', 'Cancel')}</button></div>`);
   $('#modalBox').querySelectorAll('[data-i]').forEach(b => b.onclick = () => {
     const o = opts[+b.dataset.i];
     if (o.app) { Modal.close(); toggleApp(o.app, false); } else Modal.rule(o.r);
@@ -509,11 +532,11 @@ function renderMap() {
   const ccs = new Set(nodes.map(n => n.cc).filter(c => c && c !== 'LAN'));
   const apps = new Set(); nodes.forEach(n => n.apps.forEach(a => apps.add(a)));
   const stats = [
-    ['conns', nodes.reduce((s, n) => s + n.conns.length, 0), 'conexiuni pe hartă'],
-    ['apps', apps.size, 'aplicații'], ['countries', ccs.size, 'țări'], ['locs', nodes.length, 'locații'],
+    ['conns', nodes.reduce((s, n) => s + n.conns.length, 0), tr('conexiuni pe hartă', 'connections on map')],
+    ['apps', apps.size, tr('aplicații', 'apps')], ['countries', ccs.size, tr('țări', 'countries')], ['locs', nodes.length, tr('locații', 'locations')],
   ];
-  const sh = stats.map(([k, v, l]) => `<div class="stat click ${S.mapPanel === k && !S.mapSel && !S.mapCountry ? 'on' : ''}" data-panel="${k}" title="Click pentru detalii"><b>${v}</b><span>${l}</span></div>`).join('') +
-    (S.mapApp ? `<div class="stat click" data-panel="clearApp"><b style="font-size:13px">${esc(S.appMap.get(S.mapApp)?.name || '')}</b><span>filtru activ — click pentru toate</span></div>` : '');
+  const sh = stats.map(([k, v, l]) => `<div class="stat click ${S.mapPanel === k && !S.mapSel && !S.mapCountry ? 'on' : ''}" data-panel="${k}" title="${tr('Click pentru detalii', 'Click for details')}"><b>${v}</b><span>${l}</span></div>`).join('') +
+    (S.mapApp ? `<div class="stat click" data-panel="clearApp"><b style="font-size:13px">${esc(S.appMap.get(S.mapApp)?.name || '')}</b><span>${tr('filtru activ — click pentru toate', 'filter on — click to show all')}</span></div>` : '');
   const msEl = $('#mapStats'); if (msEl._h !== sh) { msEl.innerHTML = sh; msEl._h = sh; }
   if (S.mapSel || S.mapPanel || S.mapCountry) renderMapDetail(nodes);
 }
@@ -553,6 +576,10 @@ function aggregate(conns, keyFn) {
 }
 const rates = (d, u, tot) => `<span class="num"><span class="dn">${d ? '↓' + fmtR(d) : ''}</span> <span class="up">${u ? '↑' + fmtR(u) : ''}</span>${tot != null ? `<br><span class="dim">Σ ${fmtB(tot)}</span>` : ''}</span>`;
 const plural = (n, one, many) => n === 1 ? `1 ${one}` : `${n} ${many}`;
+// cuvinte folosite des în panourile hărții
+const WD = EN
+  ? { conn: 'connection', conns: 'connections', app: 'app', apps: 'apps', cty: 'country', ctys: 'countries', loc: 'location', locs: 'locations', cx: 'conn.', total: 'total', block: 'Block...' }
+  : { conn: 'conexiune', conns: 'conexiuni', app: 'aplicație', apps: 'aplicații', cty: 'țară', ctys: 'țări', loc: 'locație', locs: 'locații', cx: 'conex.', total: 'total', block: 'Blochează...' };
 
 function panelHtml(nodes) {
   const all = nodes.flatMap(n => n.conns);
@@ -562,44 +589,44 @@ function panelHtml(nodes) {
   switch (S.mapPanel) {
     case 'conns': {
       const list = all.slice().sort((a, b) => (b.up + b.down) - (a.up + a.down) || (b.totUp + b.totDown) - (a.totUp + a.totDown));
-      return head('Conexiuni pe hartă', plural(list.length, 'conexiune', 'conexiuni')) + list.slice(0, 250).map(c =>
-        `<div class="mp-row ${c.blocked ? 'blocked' : ''}" data-act="goloc" data-loc="${c.lat.toFixed(1)},${c.lon.toFixed(1)}" data-key="${esc(c.app)}" title="Click: arată locația pe hartă">
+      return head(tr('Conexiuni pe hartă', 'Connections on the map'), plural(list.length, WD.conn, WD.conns)) + list.slice(0, 250).map(c =>
+        `<div class="mp-row ${c.blocked ? 'blocked' : ''}" data-act="goloc" data-loc="${c.lat.toFixed(1)},${c.lon.toFixed(1)}" data-key="${esc(c.app)}" title="${tr('Click: arată locația pe hartă', 'Click: show the location on the map')}">
           <img class="app-ico sm" src="${icon(c.app)}">
           <div class="nm"><div><b>${appNm(c.app)}</b> <span class="dim">→</span> <span title="${esc(c.host || '')}">${esc(c.host || c.ip)}</span><span class="dim">:${c.rport}</span></div>
-          <div class="sub">${ccBadge(c.cc)} ${esc(c.city || ccName(c.cc))} · ${c.proto} · total ${fmtB(c.totUp + c.totDown)}</div></div>
-          ${rates(c.down, c.up)}<button class="icon-btn" data-act="blockDest" data-id="${esc(c.id)}" title="Blochează...">${SVG.ban}</button></div>`).join('') +
-        (list.length > 250 ? `<div class="dim" style="padding:6px">+${list.length - 250} conexiuni (vezi pagina Conexiuni)</div>` : '');
+          <div class="sub">${ccBadge(c.cc)} ${esc(c.city || ccName(c.cc))} · ${c.proto} · ${WD.total} ${fmtB(c.totUp + c.totDown)}</div></div>
+          ${rates(c.down, c.up)}<button class="icon-btn" data-act="blockDest" data-id="${esc(c.id)}" title="${WD.block}">${SVG.ban}</button></div>`).join('') +
+        (list.length > 250 ? `<div class="dim" style="padding:6px">+${list.length - 250} ${tr('conexiuni (vezi pagina Conexiuni)', 'connections (see the Connections page)')}</div>` : '');
     }
     case 'apps': {
       const list = aggregate(all, c => c.app);
-      return head('Aplicații pe hartă', plural(list.length, 'aplicație', 'aplicații')) + list.map(g => {
+      return head(tr('Aplicații pe hartă', 'Apps on the map'), plural(list.length, WD.app, WD.apps)) + list.map(g => {
         const a = S.appMap.get(g.key) || { key: g.key, name: g.key, canBlock: false };
         const ccs = [...g.ccs].filter(c => c !== 'LAN');
-        return `<div class="mp-row ${a.blocked ? 'blocked' : ''}" data-act="goapp" data-key="${esc(g.key)}" title="Click: arată doar această aplicație pe hartă">
+        return `<div class="mp-row ${a.blocked ? 'blocked' : ''}" data-act="goapp" data-key="${esc(g.key)}" title="${tr('Click: arată doar această aplicație pe hartă', 'Click: show only this app on the map')}">
           <img class="app-ico" src="${icon(g.key)}">
           <div class="nm"><div><b>${esc(a.name)}</b></div>
-          <div class="sub">${g.conns.length} conex. · ${plural(ccs.length, 'țară', 'țări')}</div>
+          <div class="sub">${g.conns.length} ${WD.cx} · ${plural(ccs.length, WD.cty, WD.ctys)}</div>
           <div class="app-strip">${ccs.slice(0, 8).map(ccBadge).join('')}${ccs.length > 8 ? `<span class="dim">+${ccs.length - 8}</span>` : ''}</div></div>
           ${rates(g.down, g.up)}${switchHtml(a)}</div>`;
       }).join('');
     }
     case 'countries': {
       const list = aggregate(all, c => c.cc || '??');
-      return head('Țări', plural(list.length, 'țară', 'țări')) + list.map(g =>
-        `<div class="mp-row ${g.blocked === g.conns.length ? 'blocked' : ''}" data-act="gocc" data-cc="${esc(g.key)}" title="Click: detalii țară">
+      return head(tr('Țări', 'Countries'), plural(list.length, WD.cty, WD.ctys)) + list.map(g =>
+        `<div class="mp-row ${g.blocked === g.conns.length ? 'blocked' : ''}" data-act="gocc" data-cc="${esc(g.key)}" title="${tr('Click: detalii țară', 'Click: country details')}">
           <span class="cc-big">${ccBadge(g.key)}</span>
           <div class="nm"><div><b>${esc(ccName(g.key) || g.key)}</b></div>
-          <div class="sub">${g.conns.length} conex. · ${plural(g.apps.size, 'aplicație', 'aplicații')} · ${plural(g.locs.size, 'locație', 'locații')}</div>
+          <div class="sub">${g.conns.length} ${WD.cx} · ${plural(g.apps.size, WD.app, WD.apps)} · ${plural(g.locs.size, WD.loc, WD.locs)}</div>
           <div class="app-strip">${[...g.apps].slice(0, 10).map(k => `<img class="app-ico xs" src="${icon(k)}" title="${appNm(k)}">`).join('')}</div></div>
           ${rates(g.down, g.up, g.tot)}</div>`).join('');
     }
     case 'locs': {
       const list = nodes.slice().sort((a, b) => b.rate - a.rate || b.conns.length - a.conns.length || b.tot - a.tot);
-      return head('Locații', plural(list.length, 'locație', 'locații')) + list.map(n =>
-        `<div class="mp-row ${n.cls === 'blocked' ? 'blocked' : ''}" data-act="goloc" data-loc="${n.key}" title="Click: detalii locație">
+      return head(tr('Locații', 'Locations'), plural(list.length, WD.loc, WD.locs)) + list.map(n =>
+        `<div class="mp-row ${n.cls === 'blocked' ? 'blocked' : ''}" data-act="goloc" data-loc="${n.key}" title="${tr('Click: detalii locație', 'Click: location details')}">
           <span class="cc-big">${ccBadge(n.cc)}</span>
           <div class="nm"><div><b>${esc(n.city || ccName(n.cc))}</b>${n.city ? ` <span class="dim">${esc(ccName(n.cc))}</span>` : ''}</div>
-          <div class="sub">${n.conns.length} conex. · ${plural(n.apps.size, 'aplicație', 'aplicații')}</div>
+          <div class="sub">${n.conns.length} ${WD.cx} · ${plural(n.apps.size, WD.app, WD.apps)}</div>
           <div class="app-strip">${[...n.apps].slice(0, 10).map(k => `<img class="app-ico xs" src="${icon(k)}" title="${appNm(k)}">`).join('')}</div></div>
           ${rates(n.down, n.up, n.tot)}</div>`).join('');
     }
@@ -614,8 +641,8 @@ function appsBlock(conns, perApp = 8) {
   return [...byApp.entries()].sort((x, y) => y[1].reduce((s, c) => s + c.up + c.down, 0) - x[1].reduce((s, c) => s + c.up + c.down, 0)).map(([k, cs]) => {
     const a = S.appMap.get(k) || { key: k, name: k, canBlock: false };
     return `<div class="md-app" data-key="${esc(k)}"><div class="md-app-h"><img class="app-ico" src="${icon(k)}"><span class="nm" title="${esc(a.path || '')}">${esc(a.name)}</span>${switchHtml(a)}</div>
-      ${cs.slice(0, perApp).map(c => `<div class="md-conn"><span class="host" style="max-width:190px" title="${esc(c.host || '')}">${esc(c.host || c.ip)}:${c.rport}</span><span class="num"><span class="dn">${c.down ? fmtR(c.down) : ''}</span> <span class="up">${c.up ? fmtR(c.up) : ''}</span> <button class="icon-btn" data-act="blockDest" data-id="${esc(c.id)}" title="Blochează...">${SVG.ban}</button></span></div>`).join('')}
-      ${cs.length > perApp ? `<div class="md-conn dim">+${cs.length - perApp} conexiuni</div>` : ''}</div>`;
+      ${cs.slice(0, perApp).map(c => `<div class="md-conn"><span class="host" style="max-width:190px" title="${esc(c.host || '')}">${esc(c.host || c.ip)}:${c.rport}</span><span class="num"><span class="dn">${c.down ? fmtR(c.down) : ''}</span> <span class="up">${c.up ? fmtR(c.up) : ''}</span> <button class="icon-btn" data-act="blockDest" data-id="${esc(c.id)}" title="${WD.block}">${SVG.ban}</button></span></div>`).join('')}
+      ${cs.length > perApp ? `<div class="md-conn dim">+${cs.length - perApp} ${WD.conns}</div>` : ''}</div>`;
   }).join('');
 }
 
@@ -623,23 +650,23 @@ function countryHtml(nodes) {
   const cc = S.mapCountry;
   const ns = nodes.filter(n => (n.cc || '??') === cc);
   const conns = ns.flatMap(n => n.conns);
-  if (!conns.length) return `<h3>${ccBadge(cc)} ${esc(ccName(cc))}</h3><div class="dim">Nu mai există conexiuni active către această țară.</div>`;
+  if (!conns.length) return `<h3>${ccBadge(cc)} ${esc(ccName(cc))}</h3><div class="dim">${tr('Nu mai există conexiuni active către această țară.', 'There are no more active connections to this country.')}</div>`;
   const d = conns.reduce((s, c) => s + c.down, 0), u = conns.reduce((s, c) => s + c.up, 0), tot = conns.reduce((s, c) => s + c.totUp + c.totDown, 0);
   const apps = new Set(conns.map(c => c.app));
   return `<h3>${ccBadge(cc)} ${esc(ccName(cc) || cc)}</h3>
-    <div class="muted" style="margin-bottom:8px">${plural(conns.length, 'conexiune', 'conexiuni')} · ${plural(apps.size, 'aplicație', 'aplicații')} · total ${fmtB(tot)} · <span class="dn">↓ ${fmtR(d)}</span> <span class="up">↑ ${fmtR(u)}</span></div>
-    ${cc !== 'LAN' && cc !== '??' ? `<button class="btn sm danger" data-act="blockCountry" data-cc="${esc(cc)}" style="margin-bottom:8px">Regulă: blochează ${esc(ccName(cc))}...</button>` : ''}
-    ${ns.length > 1 ? `<div class="md-sec">Locații</div>` + ns.sort((a, b) => b.rate - a.rate || b.conns.length - a.conns.length).map(n =>
-      `<div class="mp-row slim" data-act="goloc" data-loc="${n.key}"><div class="nm"><div><b>${esc(n.city || ccName(n.cc))}</b> <span class="dim">${plural(n.conns.length, 'conexiune', 'conexiuni')}</span></div></div>${rates(n.down, n.up)}</div>`).join('') : ''}
-    <div class="md-sec">Aplicații</div>${appsBlock(conns, 6)}`;
+    <div class="muted" style="margin-bottom:8px">${plural(conns.length, WD.conn, WD.conns)} · ${plural(apps.size, WD.app, WD.apps)} · ${WD.total} ${fmtB(tot)} · <span class="dn">↓ ${fmtR(d)}</span> <span class="up">↑ ${fmtR(u)}</span></div>
+    ${cc !== 'LAN' && cc !== '??' ? `<button class="btn sm danger" data-act="blockCountry" data-cc="${esc(cc)}" style="margin-bottom:8px">${tr('Regulă: blochează', 'Rule: block')} ${esc(ccName(cc))}...</button>` : ''}
+    ${ns.length > 1 ? `<div class="md-sec">${tr('Locații', 'Locations')}</div>` + ns.sort((a, b) => b.rate - a.rate || b.conns.length - a.conns.length).map(n =>
+      `<div class="mp-row slim" data-act="goloc" data-loc="${n.key}"><div class="nm"><div><b>${esc(n.city || ccName(n.cc))}</b> <span class="dim">${plural(n.conns.length, WD.conn, WD.conns)}</span></div></div>${rates(n.down, n.up)}</div>`).join('') : ''}
+    <div class="md-sec">${tr('Aplicații', 'Apps')}</div>${appsBlock(conns, 6)}`;
 }
 
 function locHtml(nodes) {
   const n = nodes.find(x => x.key === S.mapSel);
-  if (!n) return `<h3>Locație</h3><div class="dim">Conexiunile de aici s-au închis.</div>`;
+  if (!n) return `<h3>${tr('Locație', 'Location')}</h3><div class="dim">${tr('Conexiunile de aici s-au închis.', 'The connections here have closed.')}</div>`;
   return `<h3>${ccBadge(n.cc)} ${esc(n.city || ccName(n.cc))}</h3>
-    <div class="muted" style="margin-bottom:8px">${esc(ccName(n.cc))} · ${plural(n.conns.length, 'conexiune', 'conexiuni')} · total ${fmtB(n.tot)} · <span class="dn">↓ ${fmtR(n.down)}</span> <span class="up">↑ ${fmtR(n.up)}</span></div>
-    ${n.cc && n.cc !== 'LAN' ? `<button class="btn sm danger" data-act="blockCountry" data-cc="${n.cc}" style="margin-bottom:6px">Regulă: blochează ${esc(ccName(n.cc))}...</button>` : ''}
+    <div class="muted" style="margin-bottom:8px">${esc(ccName(n.cc))} · ${plural(n.conns.length, WD.conn, WD.conns)} · ${WD.total} ${fmtB(n.tot)} · <span class="dn">↓ ${fmtR(n.down)}</span> <span class="up">↑ ${fmtR(n.up)}</span></div>
+    ${n.cc && n.cc !== 'LAN' ? `<button class="btn sm danger" data-act="blockCountry" data-cc="${n.cc}" style="margin-bottom:6px">${tr('Regulă: blochează', 'Rule: block')} ${esc(ccName(n.cc))}...</button>` : ''}
     ${appsBlock(n.conns)}`;
 }
 
@@ -651,8 +678,8 @@ function showTip(e, d) {
     `<div class="row"><span style="display:flex;gap:6px;align-items:center;min-width:0"><img class="app-ico sm" src="${icon(k)}"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:150px">${esc(S.appMap.get(k)?.name || k)}</span></span><span class="num"><span class="dn">${a.down ? fmtR(a.down) : ''}</span> <span class="up">${a.up ? fmtR(a.up) : ''}</span> <span class="dim">${a.n}×</span></span></div>
      <div class="dim" style="font-size:11px;margin:-1px 0 3px 24px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc([...a.hosts].slice(0, 3).join(', '))}</div>`).join('');
   tip.innerHTML = `<h4>${ccBadge(d.cc)} ${esc(d.city || '')}${d.city ? ', ' : ''}${esc(ccName(d.cc))}</h4>
-    <div class="muted" style="margin-bottom:6px">${d.conns.length} conexiuni · ${d.apps.size} aplicații · total ${fmtB(d.tot)}</div>${rows}
-    <div class="dim" style="margin-top:4px">Click pentru detalii și blocare</div>`;
+    <div class="muted" style="margin-bottom:6px">${plural(d.conns.length, WD.conn, WD.conns)} · ${plural(d.apps.size, WD.app, WD.apps)} · ${WD.total} ${fmtB(d.tot)}</div>${rows}
+    <div class="dim" style="margin-top:4px">${tr('Click pentru detalii și blocare', 'Click for details and blocking')}</div>`;
   const r = $('#mapWrap').getBoundingClientRect();
   let x = e.clientX - r.left + 14, y = e.clientY - r.top + 14;
   if (x + 340 > r.width - 340) x = e.clientX - r.left - 354;
@@ -667,7 +694,7 @@ function renderMapDetail(nodes) {
   nodes = nodes || mapNodes();
   const body = S.mapSel ? locHtml(nodes) : S.mapCountry ? countryHtml(nodes) : panelHtml(nodes);
   const canBack = !!(S.mapSel && (S.mapCountry || S.mapPanel)) || !!(!S.mapSel && S.mapCountry && S.mapPanel);
-  const html = `<div class="md-top">${canBack ? `<button class="btn ghost sm" data-act="back">← Înapoi</button>` : '<span></span>'}<button class="icon-btn" data-act="close" title="Închide">${SVG.x}</button></div>${body}`;
+  const html = `<div class="md-top">${canBack ? `<button class="btn ghost sm" data-act="back">${tr('← Înapoi', '← Back')}</button>` : '<span></span>'}<button class="icon-btn" data-act="close" title="${tr('Închide', 'Close')}">${SVG.x}</button></div>${body}`;
   // păstrăm poziția de scroll la actualizările live (o resetăm doar când se schimbă panoul)
   const key = `${S.mapSel}|${S.mapCountry}|${S.mapPanel}`;
   const st = box.scrollTop;
@@ -707,8 +734,8 @@ function renderMapSide() {
   list.sort((a, b) => (b.up + b.down) - (a.up + a.down) || b.conns - a.conns || a.name.localeCompare(b.name));
   $('#mapApps').innerHTML = list.map(a => `<div class="ms-item ${a.blocked ? 'blocked' : ''} ${S.mapApp === a.key ? 'sel' : ''}" data-key="${esc(a.key)}">
     <img class="app-ico" src="${icon(a.key)}"><div class="nm"><div title="${esc(a.path)}">${esc(a.name)}</div>
-    <div>${a.blocked ? '<span style="color:#fca5a5">blocat</span> · ' : ''}${a.conns} conex. ${a.down ? '· <span class="dn">↓' + fmtR(a.down) + '</span>' : ''} ${a.up ? '<span class="up">↑' + fmtR(a.up) + '</span>' : ''}</div></div>
-    ${switchHtml(a)}</div>`).join('') || '<div class="empty">Nicio aplicație conectată.</div>';
+    <div>${a.blocked ? `<span style="color:#fca5a5">${tr('blocat', 'blocked')}</span> · ` : ''}${a.conns} ${WD.cx} ${a.down ? '· <span class="dn">↓' + fmtR(a.down) + '</span>' : ''} ${a.up ? '<span class="up">↑' + fmtR(a.up) + '</span>' : ''}</div></div>
+    ${switchHtml(a)}</div>`).join('') || `<div class="empty">${tr('Nicio aplicație conectată.', 'No connected apps.')}</div>`;
 }
 $('#mapSearch').oninput = schedule;
 $('#mapApps').addEventListener('click', e => {
@@ -731,7 +758,7 @@ function fillHistApps() {
   for (const a of S.apps) if (a.canBlock) items.set(a.key, a.name);
   if (S.history) for (const a of S.history.apps) items.set(a.key, a.name);
   if (S.histApp && !items.has(S.histApp)) items.set(S.histApp, S.appMap.get(S.histApp)?.name || S.histApp);
-  sel.innerHTML = '<option value="">Toate aplicațiile</option>' + [...items.entries()].sort((a, b) => a[1].localeCompare(b[1])).map(([k, n]) => `<option value="${esc(k)}">${esc(n)}</option>`).join('');
+  sel.innerHTML = `<option value="">${tr('Toate aplicațiile', 'All apps')}</option>` + [...items.entries()].sort((a, b) => a[1].localeCompare(b[1])).map(([k, n]) => `<option value="${esc(k)}">${esc(n)}</option>`).join('');
   sel.value = S.histApp;
 }
 function hbars(items, colorize = true) {
@@ -739,24 +766,26 @@ function hbars(items, colorize = true) {
   return items.map(i => `<div class="hbar">${i.ic ? `<img class="app-ico sm ic" src="${i.ic}">` : `<span class="ic">${i.badge || ''}</span>`}
     <div class="lbl" title="${esc(i.title || i.label)}">${i.label}</div>
     <div class="val">${fmtB(i.up + i.down)}</div>
-    <div class="track"><i style="width:${100 * i.down / max}%;background:var(--dn)"></i><i style="width:${100 * i.up / max}%;background:var(--up)"></i></div></div>`).join('') || '<div class="empty">Fără date încă.</div>';
+    <div class="track"><i style="width:${100 * i.down / max}%;background:var(--dn)"></i><i style="width:${100 * i.up / max}%;background:var(--up)"></i></div></div>`).join('') || `<div class="empty">${tr('Fără date încă.', 'No data yet.')}</div>`;
 }
 function renderHistory() {
   const h = S.history; if (!h) return;
   fillHistApps();
   const totD = d3.sum(h.timeline, d => d.down), totU = d3.sum(h.timeline, d => d.up);
-  $('#histKpis').innerHTML = `<div class="kpi"><span>Download total</span><b class="dn">${fmtB(totD)}</b></div>
-    <div class="kpi"><span>Upload total</span><b class="up">${fmtB(totU)}</b></div>
-    <div class="kpi"><span>Aplicații</span><b>${h.apps.length}</b></div>
-    <div class="kpi"><span>Țări</span><b>${h.countries.filter(c => c.cc && c.cc !== 'LAN').length}</b></div>
-    <div class="kpi"><span>Destinații</span><b>${h.hosts.length}${h.hosts.length >= 60 ? '+' : ''}</b></div>`;
+  $('#histKpis').innerHTML = `<div class="kpi"><span>${tr('Download total', 'Total download')}</span><b class="dn">${fmtB(totD)}</b></div>
+    <div class="kpi"><span>${tr('Upload total', 'Total upload')}</span><b class="up">${fmtB(totU)}</b></div>
+    <div class="kpi"><span>${tr('Aplicații', 'Apps')}</span><b>${h.apps.length}</b></div>
+    <div class="kpi"><span>${tr('Țări', 'Countries')}</span><b>${h.countries.filter(c => c.cc && c.cc !== 'LAN').length}</b></div>
+    <div class="kpi"><span>${tr('Destinații', 'Destinations')}</span><b>${h.hosts.length}${h.hosts.length >= 60 ? '+' : ''}</b></div>`;
   drawHistChart(h);
   $('#histApps').innerHTML = hbars(h.apps.slice(0, 12).map(a => ({ ic: a.icon || icon(a.key), label: esc(a.name), title: a.path, up: a.up, down: a.down })));
-  $('#histCountries').innerHTML = hbars(h.countries.slice(0, 12).map(c => ({ badge: ccBadge(c.cc || '?'), label: esc(c.cc === 'LAN' ? 'Rețea locală' : ccName(c.cc) || 'Necunoscut') + ` <span class="dim">· ${c.apps} aplicații</span>`, up: c.up, down: c.down })));
-  $('#histHosts').innerHTML = hbars(h.hosts.map(x => ({ badge: ccBadge(x.cc), label: `<span class="mono">${esc(x.host)}</span> <span class="dim">· ${x.apps} apl.</span>`, title: x.host, up: x.up, down: x.down })));
-  const EV = { new_app: 'Aplicație nouă', block: 'Blocat', unblock: 'Deblocat', panic_on: 'Panică', panic_off: 'Internet restabilit' };
-  $('#histEvents').innerHTML = h.events.map(e => `<div class="ev"><time>${fmtTime(e.ts)}</time><span class="k ${e.kind}">${EV[e.kind] || e.kind}</span><span>${e.app ? `<b>${esc(e.appName || e.app.split('\\').pop())}</b> ` : ''}<span class="muted">${esc(e.detail || '')}</span></span></div>`).join('') || '<div class="empty">Niciun eveniment în această perioadă.</div>';
-  $('#histPorts').innerHTML = h.ports.map(p => `<div class="port"><b>${p.port}</b> ${p.proto}${PORTS[p.port] ? ' · ' + PORTS[p.port] : ''} <span class="muted">· ${fmtB(p.bytes)}</span></div>`).join('') || '<div class="dim">Fără date încă.</div>';
+  $('#histCountries').innerHTML = hbars(h.countries.slice(0, 12).map(c => ({ badge: ccBadge(c.cc || '?'), label: esc(ccName(c.cc) || tr('Necunoscut', 'Unknown')) + ` <span class="dim">· ${plural(c.apps, WD.app, WD.apps)}</span>`, up: c.up, down: c.down })));
+  $('#histHosts').innerHTML = hbars(h.hosts.map(x => ({ badge: ccBadge(x.cc), label: `<span class="mono">${esc(x.host)}</span> <span class="dim">· ${plural(x.apps, WD.app, WD.apps)}</span>`, title: x.host, up: x.up, down: x.down })));
+  const EV = EN
+    ? { new_app: 'New app', block: 'Blocked', unblock: 'Unblocked', panic_on: 'Panic', panic_off: 'Internet restored' }
+    : { new_app: 'Aplicație nouă', block: 'Blocat', unblock: 'Deblocat', panic_on: 'Panică', panic_off: 'Internet restabilit' };
+  $('#histEvents').innerHTML = h.events.map(e => `<div class="ev"><time>${fmtTime(e.ts)}</time><span class="k ${e.kind}">${EV[e.kind] || e.kind}</span><span>${e.app ? `<b>${esc(e.appName || e.app.split('\\').pop())}</b> ` : ''}<span class="muted">${esc(e.detail || '')}</span></span></div>`).join('') || `<div class="empty">${tr('Niciun eveniment în această perioadă.', 'No events in this period.')}</div>`;
+  $('#histPorts').innerHTML = h.ports.map(p => `<div class="port"><b>${p.port}</b> ${p.proto}${PORTS[p.port] ? ' · ' + PORTS[p.port] : ''} <span class="muted">· ${fmtB(p.bytes)}</span></div>`).join('') || `<div class="dim">${tr('Fără date încă.', 'No data yet.')}</div>`;
 }
 function drawHistChart(h) {
   const svg = d3.select('#histChart'); svg.selectAll('*').remove();
@@ -803,9 +832,11 @@ window.addEventListener('resize', () => { if (S.view === 'history' && S.history)
 // ---------------------------------------------------------------- rules
 $('#newRule').onclick = () => Modal.rule({});
 $('#ruleSearch').oninput = renderRules;
-const DIR = { out: 'ieșire', in: 'intrare', both: 'ieșire + intrare' };
+const DIR = EN ? { out: 'outbound', in: 'inbound', both: 'outbound + inbound' } : { out: 'ieșire', in: 'intrare', both: 'ieșire + intrare' };
 function ruleText(r) {
-  const tgt = { any: 'oriunde', ip: `IP ${r.value}`, domain: `domeniul ${r.value} (+ subdomenii)`, country: `țara ${ccName(r.value)}` }[r.target] || r.target;
+  const tgt = (EN
+    ? { any: 'anywhere', ip: `IP ${r.value}`, domain: `domain ${r.value} (+ subdomains)`, country: `country ${ccName(r.value)}` }
+    : { any: 'oriunde', ip: `IP ${r.value}`, domain: `domeniul ${r.value} (+ subdomenii)`, country: `țara ${ccName(r.value)}` })[r.target] || r.target;
   const ports = r.ports ? ` · port ${r.ports}` : '';
   const proto = r.protocol && r.protocol !== 'any' ? ` · ${r.protocol.toUpperCase()}` : '';
   return { tgt, extra: `${DIR[r.direction] || r.direction}${proto}${ports}` };
@@ -818,23 +849,23 @@ function renderRules() {
     const t = ruleText(r);
     const appIco = r.appPath ? icon(r.appPath.toLowerCase()) : null;
     const title = r.kind === 'app'
-      ? `<span class="pill red">Internet tăiat complet</span> ${esc(r.appName || r.appPath)}`
-      : `<span class="pill red">Blochează</span> ${esc(r.appName || 'Toate aplicațiile')} <span class="muted">→</span> ${esc(t.tgt)}`;
-    const sub = r.kind === 'app' ? `${esc(r.appPath)}` : `${esc(t.extra)}${r.appPath ? ' · ' + esc(r.appPath) : ''}${r.target === 'domain' ? ` · ${r.resolvedIps?.length || 0} IP-uri cunoscute` : ''}`;
+      ? `<span class="pill red">${tr('Internet tăiat complet', 'Internet fully cut off')}</span> ${esc(r.appName || r.appPath)}`
+      : `<span class="pill red">${tr('Blochează', 'Block')}</span> ${esc(r.appName || tr('Toate aplicațiile', 'All apps'))} <span class="muted">→</span> ${esc(t.tgt)}`;
+    const sub = r.kind === 'app' ? `${esc(r.appPath)}` : `${esc(t.extra)}${r.appPath ? ' · ' + esc(r.appPath) : ''}${r.target === 'domain' ? ` · ${r.resolvedIps?.length || 0} ${tr('IP-uri cunoscute', 'known IPs')}` : ''}`;
     return `<div class="rule ${r.enabled ? '' : 'off'}" data-id="${r.id}">
       ${appIco ? `<img class="app-ico" src="${appIco}">` : `<span class="app-ico" style="display:grid;place-items:center;color:var(--muted)">${SVG.ban.replace('<svg', '<svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"')}</span>`}
-      <div class="rtxt"><div class="rtitle">${title}</div><div class="rsub" title="${esc(sub)}">${sub}${r.note ? ' · ' + esc(r.note) : ''} · ${r.fwCount || 0} reguli firewall</div>${r.error ? `<div class="err">⚠ ${esc(r.error)}</div>` : ''}</div>
-      <label class="sw neutral" title="Activă / inactivă"><input type="checkbox" data-act="en" ${r.enabled ? 'checked' : ''}><span></span></label>
-      ${r.kind === 'custom' ? `<button class="icon-btn" data-act="edit" title="Editează">${SVG.edit}</button>` : ''}
-      <button class="icon-btn" data-act="del" title="Șterge">${SVG.trash}</button></div>`;
-  }).join('') || `<div class="empty">Nicio regulă încă.<br><br>Folosește sliderul din Aplicații ca să tai internetul unei aplicații, sau creează o regulă detaliată (pe domeniu, IP, țară, port).</div>`;
+      <div class="rtxt"><div class="rtitle">${title}</div><div class="rsub" title="${esc(sub)}">${sub}${r.note ? ' · ' + esc(r.note) : ''} · ${r.fwCount || 0} ${tr('reguli firewall', 'firewall filters')}</div>${r.error ? `<div class="err">⚠ ${esc(r.error)}</div>` : ''}</div>
+      <label class="sw neutral" title="${tr('Activă / inactivă', 'Enabled / disabled')}"><input type="checkbox" data-act="en" ${r.enabled ? 'checked' : ''}><span></span></label>
+      ${r.kind === 'custom' ? `<button class="icon-btn" data-act="edit" title="${tr('Editează', 'Edit')}">${SVG.edit}</button>` : ''}
+      <button class="icon-btn" data-act="del" title="${tr('Șterge', 'Delete')}">${SVG.trash}</button></div>`;
+  }).join('') || `<div class="empty">${tr('Nicio regulă încă.<br><br>Folosește sliderul din Aplicații ca să tai internetul unei aplicații, sau creează o regulă detaliată (pe domeniu, IP, țară, port).', 'No rules yet.<br><br>Use the switch on the Apps page to cut an app off the internet, or create a detailed rule (by domain, IP, country, port).')}</div>`;
 }
 $('#rulesList').addEventListener('click', e => {
   const t = e.target.closest('[data-act]'); if (!t) return;
   const id = t.closest('.rule').dataset.id; const r = S.rules.find(x => x.id === id);
   if (t.dataset.act === 'en') send({ cmd: 'toggleRule', id, enabled: t.checked });
   if (t.dataset.act === 'edit') Modal.rule(r);
-  if (t.dataset.act === 'del') confirmBox('Ștergi regula?', r.kind === 'app' ? `Aplicația „${r.appName}” va avea din nou acces la internet.` : 'Regula va fi eliminată, iar blocarea ei încetează imediat.', 'Șterge', () => send({ cmd: 'deleteRule', id }), true);
+  if (t.dataset.act === 'del') confirmBox(tr('Ștergi regula?', 'Delete this rule?'), r.kind === 'app' ? tr(`Aplicația „${r.appName}” va avea din nou acces la internet.`, `"${r.appName}" will have internet access again.`) : tr('Regula va fi eliminată, iar blocarea ei încetează imediat.', 'The rule is removed and its blocking stops immediately.'), tr('Șterge', 'Delete'), () => send({ cmd: 'deleteRule', id }), true);
 });
 
 // ---------------------------------------------------------------- modal
@@ -853,24 +884,29 @@ const Modal = {
       for (const a of S.appList) m.set(a.path, a.name);
       for (const x of S.rules) if (x.appPath) m.set(x.appPath, x.appName || x.appPath);
       for (const [p, n] of extraApps) m.set(p, n);
-      return '<option value="">— Toate aplicațiile —</option>' + [...m.entries()].sort((a, b) => a[1].localeCompare(b[1])).map(([p, n]) => `<option value="${esc(p)}" ${p === r.appPath ? 'selected' : ''}>${esc(n)} — ${esc(p.split('\\').pop())}</option>`).join('') + '<option value="__browse">📁 Alege alt fișier .exe...</option>';
+      return `<option value="">${tr('— Toate aplicațiile —', '— All apps —')}</option>` + [...m.entries()].sort((a, b) => a[1].localeCompare(b[1])).map(([p, n]) => `<option value="${esc(p)}" ${p === r.appPath ? 'selected' : ''}>${esc(n)} — ${esc(p.split('\\').pop())}</option>`).join('') + `<option value="__browse">${tr('📁 Alege alt fișier .exe...', '📁 Choose another .exe file...')}</option>`;
     };
-    const countries = COUNTRY_CODES.map(c => [c, ccName(c)]).filter(x => x[1] && x[1] !== x[0]).sort((a, b) => a[1].localeCompare(b[1], 'ro'));
-    this.open(`<h2>${isEdit ? 'Editează regula' : 'Regulă nouă de blocare'}</h2>
-      <div class="form-row"><label>Aplicație</label><select id="fApp">${appOptions()}</select><span class="hint">Lasă „Toate aplicațiile” pentru o regulă globală (ex: blochează un domeniu pentru tot PC-ul).</span></div>
-      <div class="form-row"><label>Destinație</label>
-        <div class="seg" id="fTarget"><button data-v="any">Oriunde</button><button data-v="domain">Domeniu</button><button data-v="ip">IP / rețea</button><button data-v="country">Țară</button></div>
+    const countries = COUNTRY_CODES.map(c => [c, ccName(c)]).filter(x => x[1] && x[1] !== x[0]).sort((a, b) => a[1].localeCompare(b[1], LANG));
+    this.open(`<h2>${isEdit ? tr('Editează regula', 'Edit rule') : tr('Regulă nouă de blocare', 'New block rule')}</h2>
+      <div class="form-row"><label>${tr('Aplicație', 'App')}</label><select id="fApp">${appOptions()}</select><span class="hint">${tr('Lasă „Toate aplicațiile” pentru o regulă globală (ex: blochează un domeniu pentru tot PC-ul).', 'Leave "All apps" for a global rule (e.g. block a domain for the whole PC).')}</span></div>
+      <div class="form-row"><label>${tr('Destinație', 'Destination')}</label>
+        <div class="seg" id="fTarget"><button data-v="any">${tr('Oriunde', 'Anywhere')}</button><button data-v="domain">${tr('Domeniu', 'Domain')}</button><button data-v="ip">${tr('IP / rețea', 'IP / network')}</button><button data-v="country">${tr('Țară', 'Country')}</button></div>
         <input type="text" id="fValue" placeholder="">
         <select id="fCountry" class="hidden">${countries.map(([c, n]) => `<option value="${c}">${esc(n)} (${c})</option>`).join('')}</select>
         <span class="hint" id="fHint"></span></div>
-      <div class="form-row"><label>Direcție</label><div class="seg" id="fDir"><button data-v="out">Ieșire (spre internet)</button><button data-v="in">Intrare (spre PC)</button><button data-v="both">Ambele</button></div></div>
-      <div class="form-row"><label>Protocol și porturi</label><div class="form-inline"><div class="seg" id="fProto" style="flex:none"><button data-v="any">Oricare</button><button data-v="tcp">TCP</button><button data-v="udp">UDP</button></div>
-        <input type="text" id="fPorts" placeholder="toate porturile — sau ex: 443, 80, 6881-6889"></div></div>
-      <div class="form-row"><label>Notă (opțional)</label><input type="text" id="fNote" placeholder="ex: fără reclame în aplicație"></div>
+      <div class="form-row"><label>${tr('Direcție', 'Direction')}</label><div class="seg" id="fDir"><button data-v="out">${tr('Ieșire (spre internet)', 'Outbound (to the internet)')}</button><button data-v="in">${tr('Intrare (spre PC)', 'Inbound (to this PC)')}</button><button data-v="both">${tr('Ambele', 'Both')}</button></div></div>
+      <div class="form-row"><label>${tr('Protocol și porturi', 'Protocol and ports')}</label><div class="form-inline"><div class="seg" id="fProto" style="flex:none"><button data-v="any">${tr('Oricare', 'Any')}</button><button data-v="tcp">TCP</button><button data-v="udp">UDP</button></div>
+        <input type="text" id="fPorts" placeholder="${tr('toate porturile — sau ex: 443, 80, 6881-6889', 'all ports — or e.g. 443, 80, 6881-6889')}"></div></div>
+      <div class="form-row"><label>${tr('Notă (opțional)', 'Note (optional)')}</label><input type="text" id="fNote" placeholder="${tr('ex: fără reclame în aplicație', 'e.g. no in-app ads')}"></div>
       <div class="preview" id="fPreview"></div>
-      <div class="modal-actions"><button class="btn ghost" data-close>Renunță</button><button class="btn primary" id="fSave">${isEdit ? 'Salvează' : 'Creează regula'}</button></div>`);
+      <div class="modal-actions"><button class="btn ghost" data-close>${tr('Renunță', 'Cancel')}</button><button class="btn primary" id="fSave">${isEdit ? tr('Salvează', 'Save') : tr('Creează regula', 'Create rule')}</button></div>`);
     const segSet = (id, v) => $(id).querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.v === v));
-    const HINTS = {
+    const HINTS = EN ? {
+      any: 'Blocks every destination (combine with ports to block only certain services).',
+      domain: 'E.g. facebook.com — all subdomains are blocked too. IPs are learned automatically from DNS.',
+      ip: 'E.g. 1.2.3.4 · 10.0.0.0/8 · 1.1.1.1-1.1.1.9 · several separated by commas.',
+      country: 'All IP ranges assigned to the country (from the DB-IP database).',
+    } : {
       any: 'Blochează orice destinație (combină cu porturi pentru a bloca doar anumite servicii).',
       domain: 'Ex: facebook.com — blochează și toate subdomeniile. IP-urile sunt învățate automat din DNS.',
       ip: 'Ex: 1.2.3.4 · 10.0.0.0/8 · 1.1.1.1-1.1.1.9 · mai multe separate prin virgulă.',
@@ -880,11 +916,13 @@ const Modal = {
       segSet('#fTarget', r.target); segSet('#fDir', r.direction); segSet('#fProto', r.protocol);
       $('#fValue').classList.toggle('hidden', r.target === 'any' || r.target === 'country');
       $('#fCountry').classList.toggle('hidden', r.target !== 'country');
-      $('#fValue').placeholder = r.target === 'domain' ? 'ex: facebook.com' : 'ex: 1.2.3.4 sau 192.168.0.0/16';
+      $('#fValue').placeholder = r.target === 'domain' ? tr('ex: facebook.com', 'e.g. facebook.com') : tr('ex: 1.2.3.4 sau 192.168.0.0/16', 'e.g. 1.2.3.4 or 192.168.0.0/16');
       $('#fHint').textContent = HINTS[r.target];
-      const appTxt = r.appPath ? (extraApps.get(r.appPath) || $('#fApp').selectedOptions[0]?.textContent.split(' — ')[0]) : 'toate aplicațiile';
-      const tgt = { any: 'orice destinație', domain: r.value ? `domeniul ${r.value} și subdomeniile lui` : 'domeniul ...', ip: r.value || 'IP ...', country: `țara ${ccName(r.value)}` }[r.target];
-      $('#fPreview').innerHTML = `Blochează <b>${esc(appTxt)}</b> → <b>${esc(tgt)}</b>, ${DIR[r.direction]}${r.protocol !== 'any' ? ', ' + r.protocol.toUpperCase() : ''}${r.ports ? ', port ' + esc(r.ports) : ', toate porturile'}.`;
+      const appTxt = r.appPath ? (extraApps.get(r.appPath) || $('#fApp').selectedOptions[0]?.textContent.split(' — ')[0]) : tr('toate aplicațiile', 'all apps');
+      const tgt = (EN
+        ? { any: 'any destination', domain: r.value ? `domain ${r.value} and its subdomains` : 'domain ...', ip: r.value || 'IP ...', country: `country ${ccName(r.value)}` }
+        : { any: 'orice destinație', domain: r.value ? `domeniul ${r.value} și subdomeniile lui` : 'domeniul ...', ip: r.value || 'IP ...', country: `țara ${ccName(r.value)}` })[r.target];
+      $('#fPreview').innerHTML = `${tr('Blochează', 'Block')} <b>${esc(appTxt)}</b> → <b>${esc(tgt)}</b>, ${DIR[r.direction]}${r.protocol !== 'any' ? ', ' + r.protocol.toUpperCase() : ''}${r.ports ? ', port ' + esc(r.ports) : tr(', toate porturile', ', all ports')}.`;
     };
     $('#fValue').value = r.target === 'country' ? '' : (r.value || '');
     if (r.target === 'country' && r.value) $('#fCountry').value = r.value; else if (r.target === 'country') r.value = $('#fCountry').value;
@@ -924,7 +962,7 @@ document.addEventListener('keydown', e => {
 });
 function confirmBox(title, text, okText, onOk, danger, onCancel) {
   Modal.open(`<h2>${esc(title)}</h2><p class="muted" style="line-height:1.6">${esc(text)}</p>
-    <div class="modal-actions"><button class="btn ghost" id="cCancel">Renunță</button><button class="btn ${danger ? 'danger' : 'primary'}" id="cOk">${esc(okText)}</button></div>`);
+    <div class="modal-actions"><button class="btn ghost" id="cCancel">${tr('Renunță', 'Cancel')}</button><button class="btn ${danger ? 'danger' : 'primary'}" id="cOk">${esc(okText)}</button></div>`);
   $('#cOk').onclick = () => { Modal.close(); onOk(); };
   $('#cCancel').onclick = () => { Modal.close(); onCancel && onCancel(); };
 }
@@ -937,55 +975,59 @@ function toast(text, kind = 'info') {
 function renderSettings() {
   const s = S.settings;
   const row = (key, title, desc) => `<div class="set"><div class="st"><b>${title}</b><span>${desc}</span></div><label class="sw neutral"><input type="checkbox" data-k="${key}" ${s[key] ? 'checked' : ''}><span></span></label></div>`;
+  const lang = s.language === 'ro' || s.language === 'en' ? s.language : 'auto';
   $('#settingsForm').innerHTML = `
-    <div class="set-group"><h3>General</h3>
-      ${row('startWithWindows', 'Pornește cu Windows', 'Rulează automat la logare (cu drepturi de administrator, fără prompt UAC).')}
-      ${row('startMinimized', 'Pornește minimizat în tray', 'Fereastra nu se deschide la pornire; FallenSec rulează în fundal.')}
-      ${row('minimizeToTray', 'Minimizarea trimite în tray', 'Butonul de minimizare ascunde fereastra lângă ceas, nu în taskbar.')}
-      ${row('closeToTray', 'Închiderea ferestrei trimite în tray', 'Monitorizarea și istoricul continuă în fundal.')}
-      ${row('notifyNewApps', 'Notificare la aplicații noi', 'Afișează o notificare când o aplicație iese pe internet pentru prima dată.')}
-      ${row('showLan', 'Arată conexiunile din rețeaua locală', 'Include imprimante, NAS, router etc.')}
+    <div class="set-group"><h3>${tr('General', 'General')}</h3>
+      <div class="set"><div class="st"><b>${tr('Limba', 'Language')}</b><span>${tr('Automat = limba Windows (română sau engleză).', 'Auto = the Windows language (Romanian if Windows is in Romanian, otherwise English).')}</span></div>
+        <div class="seg" id="langSel"><button data-v="auto" class="${lang === 'auto' ? 'on' : ''}">${tr('Automat', 'Auto')}</button><button data-v="ro" class="${lang === 'ro' ? 'on' : ''}">Română</button><button data-v="en" class="${lang === 'en' ? 'on' : ''}">English</button></div></div>
+      ${row('startWithWindows', tr('Pornește cu Windows', 'Start with Windows'), tr('Rulează automat la logare (cu drepturi de administrator, fără prompt UAC).', 'Runs automatically at sign-in (with administrator rights, no UAC prompt).'))}
+      ${row('startMinimized', tr('Pornește minimizat în tray', 'Start minimized to tray'), tr('Fereastra nu se deschide la pornire; FallenSec rulează în fundal.', 'The window does not open at startup; FallenSec runs in the background.'))}
+      ${row('minimizeToTray', tr('Minimizarea trimite în tray', 'Minimize to tray'), tr('Butonul de minimizare ascunde fereastra lângă ceas, nu în taskbar.', 'The minimize button hides the window next to the clock instead of the taskbar.'))}
+      ${row('closeToTray', tr('Închiderea ferestrei trimite în tray', 'Close to tray'), tr('Monitorizarea și istoricul continuă în fundal.', 'Monitoring and history keep running in the background.'))}
+      ${row('notifyNewApps', tr('Notificare la aplicații noi', 'Notify about new apps'), tr('Afișează o notificare când o aplicație iese pe internet pentru prima dată.', 'Shows a notification when an app goes online for the first time.'))}
+      ${row('showLan', tr('Arată conexiunile din rețeaua locală', 'Show local network connections'), tr('Include imprimante, NAS, router etc.', 'Includes printers, NAS, router, etc.'))}
     </div>
-    <div class="set-group"><h3>Blocare</h3>
-      <div class="set"><div class="st"><b>Motor de blocare</b><span id="blockInfo">${esc(S.status.block?.text || '')}</span></div>
-        <div class="seg" id="blockEngine"><button data-v="wfp" class="${s.blockEngine !== 'winfw' ? 'on' : ''}" title="Windows Filtering Platform – merge și cu Bitdefender, ESET, Kaspersky etc.">WFP (recomandat)</button><button data-v="winfw" class="${s.blockEngine === 'winfw' ? 'on' : ''}" title="Reguli clasice în Windows Firewall (grupul FallenSec) – necesită Windows Firewall pornit">Windows Firewall</button></div></div>
-      <div class="set"><div class="st"><b>Windows Firewall</b><span>Necesar doar dacă motorul de blocare este „Windows Firewall”.</span></div><button class="btn sm" id="fwOn">Pornește pe toate profilurile</button></div>
+    <div class="set-group"><h3>${tr('Blocare', 'Blocking')}</h3>
+      <div class="set"><div class="st"><b>${tr('Motor de blocare', 'Blocking engine')}</b><span id="blockInfo">${esc(S.status.block?.text || '')}</span></div>
+        <div class="seg" id="blockEngine"><button data-v="wfp" class="${s.blockEngine !== 'winfw' ? 'on' : ''}" title="${tr('Windows Filtering Platform – merge și cu Bitdefender, ESET, Kaspersky etc.', 'Windows Filtering Platform – also works with Bitdefender, ESET, Kaspersky, etc.')}">${tr('WFP (recomandat)', 'WFP (recommended)')}</button><button data-v="winfw" class="${s.blockEngine === 'winfw' ? 'on' : ''}" title="${tr('Reguli clasice în Windows Firewall (grupul FallenSec) – necesită Windows Firewall pornit', 'Classic Windows Firewall rules (FallenSec group) – requires Windows Firewall to be on')}">Windows Firewall</button></div></div>
+      <div class="set"><div class="st"><b>Windows Firewall</b><span>${tr('Necesar doar dacă motorul de blocare este „Windows Firewall”.', 'Only needed when the blocking engine is "Windows Firewall".')}</span></div><button class="btn sm" id="fwOn">${tr('Pornește pe toate profilurile', 'Turn on for all profiles')}</button></div>
     </div>
-    <div class="set-group"><h3>Hartă</h3>
-      ${row('homeAuto', 'Detectează automat locația mea', 'Folosește IP-ul public pentru punctul de plecare de pe hartă.')}
-      <div class="set ${s.homeAuto ? 'hidden' : ''}" id="homeManual"><div class="st"><b>Locație manuală</b><span>Latitudine, longitudine și nume.</span></div>
+    <div class="set-group"><h3>${tr('Hartă', 'Map')}</h3>
+      ${row('homeAuto', tr('Detectează automat locația mea', 'Detect my location automatically'), tr('Folosește IP-ul public pentru punctul de plecare de pe hartă.', 'Uses your public IP for the starting point on the map.'))}
+      <div class="set ${s.homeAuto ? 'hidden' : ''}" id="homeManual"><div class="st"><b>${tr('Locație manuală', 'Manual location')}</b><span>${tr('Latitudine, longitudine și nume.', 'Latitude, longitude and name.')}</span></div>
         <input type="number" step="0.01" id="hLat" value="${s.homeLat ?? 44.43}" style="width:100px"><input type="number" step="0.01" id="hLon" value="${s.homeLon ?? 26.10}" style="width:100px">
         <input type="text" id="hCity" value="${esc(s.homeCity ?? 'București')}" style="width:140px"></div>
     </div>
-    <div class="set-group"><h3>Istoric și date</h3>
-      <div class="set"><div class="st"><b>Păstrează istoricul</b><span>Datele mai vechi sunt șterse automat.</span></div><input type="number" min="1" max="365" id="hDays" value="${s.historyDays ?? 30}" style="width:80px"> <span class="muted">zile</span></div>
-      <div class="set"><div class="st"><b>Șterge istoricul</b><span>Elimină traficul și evenimentele salvate.</span></div><button class="btn danger sm" id="clearHist">Șterge</button></div>
-      <div class="set"><div class="st"><b>Baza de geolocalizare</b><span>${esc(S.status.geo || '')}</span></div><button class="btn sm" id="geoUpd">Actualizează acum</button></div>
+    <div class="set-group"><h3>${tr('Istoric și date', 'History and data')}</h3>
+      <div class="set"><div class="st"><b>${tr('Păstrează istoricul', 'Keep history for')}</b><span>${tr('Datele mai vechi sunt șterse automat.', 'Older data is deleted automatically.')}</span></div><input type="number" min="1" max="365" id="hDays" value="${s.historyDays ?? 30}" style="width:80px"> <span class="muted">${tr('zile', 'days')}</span></div>
+      <div class="set"><div class="st"><b>${tr('Șterge istoricul', 'Clear history')}</b><span>${tr('Elimină traficul și evenimentele salvate.', 'Removes the saved traffic and events.')}</span></div><button class="btn danger sm" id="clearHist">${tr('Șterge', 'Clear')}</button></div>
+      <div class="set"><div class="st"><b>${tr('Baza de geolocalizare', 'Geolocation database')}</b><span>${esc(S.status.geo || '')}</span></div><button class="btn sm" id="geoUpd">${tr('Actualizează acum', 'Update now')}</button></div>
     </div>
-    <div class="set-group"><h3>Aplicație</h3>
-      <div class="set"><div class="st"><b>Ieșire din FallenSec</b><span>Regulile de blocare rămân active chiar și după ieșire și după repornirea PC-ului.</span></div><button class="btn sm" id="exitApp">Ieșire</button></div>
+    <div class="set-group"><h3>${tr('Aplicație', 'Application')}</h3>
+      <div class="set"><div class="st"><b>${tr('Ieșire din FallenSec', 'Exit FallenSec')}</b><span>${tr('Regulile de blocare rămân active chiar și după ieșire și după repornirea PC-ului.', 'Block rules stay active even after you exit and after a reboot.')}</span></div><button class="btn sm" id="exitApp">${tr('Ieșire', 'Exit')}</button></div>
     </div>`;
   const save = () => send({ cmd: 'saveSettings', settings: S.settings });
+  segInit('#langSel', v => { S.settings.language = v; send({ cmd: 'setLanguage', language: v }); });
   $$('#settingsForm input[data-k]').forEach(i => i.onchange = () => { S.settings[i.dataset.k] = i.checked; if (i.dataset.k === 'homeAuto') $('#homeManual').classList.toggle('hidden', i.checked); save(); });
   ['hLat', 'hLon', 'hCity'].forEach(id => $('#' + id).onchange = () => { S.settings.homeLat = +$('#hLat').value; S.settings.homeLon = +$('#hLon').value; S.settings.homeCity = $('#hCity').value; save(); });
   $('#hDays').onchange = e => { S.settings.historyDays = Math.max(1, Math.min(365, +e.target.value || 30)); save(); };
-  $('#clearHist').onclick = () => confirmBox('Ștergi tot istoricul?', 'Traficul și evenimentele salvate vor fi eliminate definitiv.', 'Șterge', () => send({ cmd: 'clearHistory' }), true);
+  $('#clearHist').onclick = () => confirmBox(tr('Ștergi tot istoricul?', 'Clear all history?'), tr('Traficul și evenimentele salvate vor fi eliminate definitiv.', 'The saved traffic and events will be permanently removed.'), tr('Șterge', 'Clear'), () => send({ cmd: 'clearHistory' }), true);
   $('#geoUpd').onclick = () => send({ cmd: 'geoUpdate' });
   $('#fwOn').onclick = () => send({ cmd: 'enableFirewall' });
   segInit('#blockEngine', v => { S.settings.blockEngine = v; send({ cmd: 'blockEngine', engine: v }); });
-  $('#exitApp').onclick = () => confirmBox('Ieși din FallenSec?', 'Monitorizarea se oprește. Aplicațiile blocate rămân blocate.', 'Ieșire', () => send({ cmd: 'exit' }));
+  $('#exitApp').onclick = () => confirmBox(tr('Ieși din FallenSec?', 'Exit FallenSec?'), tr('Monitorizarea se oprește. Aplicațiile blocate rămân blocate.', 'Monitoring stops. Blocked apps stay blocked.'), tr('Ieșire', 'Exit'), () => send({ cmd: 'exit' }));
 }
 
 // ---------------------------------------------------------------- about
 function renderAbout() {
   $('#about').innerHTML = `<img src="logo.png" alt=""><h2>FallenSec</h2>
-    <div class="muted">Versiunea ${esc(S.version)} · Firewall și monitor de rețea pentru Windows</div>
-    <div class="muted" style="margin-top:4px">© 2026 Fallen</div>
-    <div class="cl">${CHANGELOG.map(c => `<h4>Versiunea ${c.v} <span class="dim" style="font-weight:400">· ${c.d}</span></h4><ul>${c.items.map(i => `<li>${esc(i)}</li>`).join('')}</ul>`).join('')}</div>
+    <div class="muted">${tr('Versiunea', 'Version')} ${esc(S.version)} · ${tr('Firewall și monitor de rețea pentru Windows', 'Firewall and network monitor for Windows')}</div>
+    <div class="muted" style="margin-top:4px">© 2026 Fallen · <a href="https://github.com/Fallemo/FallenSec" target="_blank">github.com/Fallemo/FallenSec</a></div>
+    <div class="cl">${CHANGELOG.map(c => `<h4>${tr('Versiunea', 'Version')} ${c.v} <span class="dim" style="font-weight:400">· ${c.d}</span></h4><ul>${c.items.map(i => `<li>${esc(tr(i[0], i[1]))}</li>`).join('')}</ul>`).join('')}</div>
     <div class="credits">
       <a href="https://db-ip.com" target="_blank">IP Geolocation by DB-IP</a> (CC BY 4.0) ·
-      Hartă: Natural Earth / world-atlas · Grafice: d3.js (ISC)<br>
-      Blocarea folosește direct Windows Filtering Platform (sau, opțional, Windows Firewall). Traficul este măsurat prin Event Tracing for Windows.
+      ${tr('Hartă', 'Map')}: Natural Earth / world-atlas · ${tr('Grafice', 'Charts')}: d3.js (ISC)<br>
+      ${tr('Blocarea folosește direct Windows Filtering Platform (sau, opțional, Windows Firewall). Traficul este măsurat prin Event Tracing for Windows.', 'Blocking uses the Windows Filtering Platform directly (or, optionally, Windows Firewall). Traffic is measured through Event Tracing for Windows.')}
     </div>`;
 }
 
@@ -998,12 +1040,12 @@ setInterval(() => { if (S.view === 'history') loadHistory(); }, 60000);
 // ---------------------------------------------------------------- demo (doar în browser, fără aplicație)
 function demoHandle(o) {
   if (o.cmd === 'ready') {
-    onMessage({ type: 'init', version: '1.1', settings: { closeToTray: true, minimizeToTray: true, notifyNewApps: true, showLan: true, homeAuto: true, historyDays: 30 }, rules: [
+    onMessage({ type: 'init', version: '1.2', settings: { closeToTray: true, minimizeToTray: true, notifyNewApps: true, showLan: true, homeAuto: true, historyDays: 30 }, rules: [
       { id: 'a1', kind: 'app', enabled: true, appPath: 'C:\\Program Files\\Telemetry\\tele.exe', appName: 'Telemetry Agent', direction: 'both', target: 'any', fwCount: 2 },
       { id: 'b2', kind: 'custom', enabled: true, appPath: null, appName: null, direction: 'out', protocol: 'any', target: 'domain', value: 'doubleclick.net', resolvedIps: ['1.1.1.1', '2.2.2.2'], fwCount: 1 },
       { id: 'c3', kind: 'custom', enabled: false, appPath: 'C:\\Games\\game.exe', appName: 'Game', direction: 'out', protocol: 'any', target: 'country', value: 'CN', fwCount: 0 }] });
     const cities = [['US', 'Ashburn', 39.04, -77.49], ['DE', 'Frankfurt', 50.11, 8.68], ['NL', 'Amsterdam', 52.37, 4.9], ['IE', 'Dublin', 53.35, -6.26], ['US', 'San Jose', 37.34, -121.89], ['SG', 'Singapore', 1.35, 103.82], ['JP', 'Tokyo', 35.68, 139.69], ['GB', 'London', 51.51, -0.13], ['FR', 'Paris', 48.86, 2.35], ['RO', 'București', 44.43, 26.1], ['SE', 'Stockholm', 59.33, 18.07], ['BR', 'São Paulo', -23.55, -46.63], ['AU', 'Sydney', -33.87, 151.21], ['IN', 'Mumbai', 19.08, 72.88], ['CA', 'Toronto', 43.65, -79.38]];
-    const apps = [['chrome', 'Google Chrome', 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe', 'Google LLC'], ['discord', 'Discord', 'C:\\Users\\me\\AppData\\Local\\Discord\\app\\Discord.exe', 'Discord Inc.'], ['steam', 'Steam', 'C:\\Program Files (x86)\\Steam\\steam.exe', 'Valve'], ['svchost', 'Servicii Windows (svchost)', 'C:\\Windows\\System32\\svchost.exe', 'Microsoft', true], ['spotify', 'Spotify', 'C:\\Users\\me\\AppData\\Roaming\\Spotify\\Spotify.exe', 'Spotify AB'], ['tele', 'Telemetry Agent', 'C:\\Program Files\\Telemetry\\tele.exe', null], ['code', 'Visual Studio Code', 'C:\\Users\\me\\AppData\\Local\\Programs\\Microsoft VS Code\\Code.exe', 'Microsoft']];
+    const apps = [['chrome', 'Google Chrome', 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe', 'Google LLC'], ['discord', 'Discord', 'C:\\Users\\me\\AppData\\Local\\Discord\\app\\Discord.exe', 'Discord Inc.'], ['steam', 'Steam', 'C:\\Program Files (x86)\\Steam\\steam.exe', 'Valve'], ['svchost', tr('Servicii Windows (svchost)', 'Windows services (svchost)'), 'C:\\Windows\\System32\\svchost.exe', 'Microsoft', true], ['spotify', 'Spotify', 'C:\\Users\\me\\AppData\\Roaming\\Spotify\\Spotify.exe', 'Spotify AB'], ['tele', 'Telemetry Agent', 'C:\\Program Files\\Telemetry\\tele.exe', null], ['code', 'Visual Studio Code', 'C:\\Users\\me\\AppData\\Local\\Programs\\Microsoft VS Code\\Code.exe', 'Microsoft']];
     const hosts = ['www.google.com', 'gateway.discord.gg', 'steamcdn-a.akamaihd.net', 'settings-win.data.microsoft.com', 'audio-ak.spotifycdn.com', 'api.github.com', 'cdn.jsdelivr.net', 'graph.facebook.com', null];
     const conns = [];
     for (let i = 0; i < 46; i++) {
@@ -1011,7 +1053,7 @@ function demoHandle(o) {
       conns.push({ id: 'c' + i, app: a[2].toLowerCase(), pid: 1000 + i, proto: i % 5 ? 'TCP' : 'UDP', lport: 50000 + i, ip: `${20 + i}.${i * 3}.10.${i}`, rport: [443, 443, 80, 5228, 3478, 443][i % 6], host: hosts[i % hosts.length], cc: c[0], country: c[0], city: c[1], lat: c[2], lon: c[3], state: i % 5 ? 'ESTABLISHED' : 'UDP', up: 0, down: 0, totUp: 1e5 * i, totDown: 4e5 * i, age: 30 * i, blocked: a[0] === 'tele' });
     }
     [['192.168.1.1', 53, 'UDP', 'svchost.exe'], ['192.168.1.20', 445, 'TCP', 'svchost.exe'], ['192.168.1.35', 8009, 'TCP', 'chrome.exe'], ['239.255.255.250', 1900, 'UDP', 'svchost.exe']].forEach(([ip, rport, proto, app], j) =>
-      conns.push({ id: 'l' + j, app, pid: 900 + j, proto, lport: 60000 + j, ip, rport, host: null, cc: 'LAN', country: 'Rețea locală', city: null, lat: null, lon: null, state: proto === 'UDP' ? 'UDP' : 'ESTABLISHED', up: 0, down: 0, totUp: 2e4 * (j + 1), totDown: 9e4 * (j + 1), age: 400 + j * 60, blocked: false }));
+      conns.push({ id: 'l' + j, app, pid: 900 + j, proto, lport: 60000 + j, ip, rport, host: null, cc: 'LAN', country: LAN_NAME, city: null, lat: null, lon: null, state: proto === 'UDP' ? 'UDP' : 'ESTABLISHED', up: 0, down: 0, totUp: 2e4 * (j + 1), totDown: 9e4 * (j + 1), age: 400 + j * 60, blocked: false }));
     let tick = 0; const hist = [];
     setInterval(() => {
       tick++;
@@ -1019,7 +1061,7 @@ function demoHandle(o) {
       const ap = apps.map(a => { const cs = conns.filter(c => c.app === a[2].toLowerCase()); return { key: a[2].toLowerCase(), name: a[1], path: a[2], publisher: a[3], sys: !!a[4], conns: cs.length, up: d3.sum(cs, c => c.up), down: d3.sum(cs, c => c.down), totUp: d3.sum(cs, c => c.totUp), totDown: d3.sum(cs, c => c.totDown), listen: a[0] === 'steam' ? ['TCP 27036', 'UDP 27036'] : [], countries: [...new Set(cs.map(c => c.cc))], blocked: a[0] === 'tele', rules: a[0] === 'chrome', canBlock: true, active: true }; });
       const up = d3.sum(conns, c => c.up), down = d3.sum(conns, c => c.down);
       hist.push([tick, up, down]); if (hist.length > 180) hist.shift();
-      onState({ type: 'state', up, down, sessUp: 1e8, sessDown: 9e8, hist, status: { admin: true, etw: true, dns: true, geo: 'Bază geo DB-IP încărcată', geoReady: true, block: { level: 'ok', engine: 'WFP', text: 'Blocarea folosește Windows Filtering Platform (demo).' }, panic: false }, home: { lat: 44.43, lon: 26.1, city: 'București' }, apps: ap, conns });
+      onState({ type: 'state', up, down, sessUp: 1e8, sessDown: 9e8, hist, status: { admin: true, etw: true, dns: true, geo: tr('Bază geo DB-IP încărcată', 'DB-IP geo database loaded'), geoReady: true, block: { level: 'ok', engine: 'WFP', text: tr('Blocarea folosește Windows Filtering Platform (demo).', 'Blocking uses the Windows Filtering Platform (demo).') }, panic: false }, home: { lat: 44.43, lon: 26.1, city: 'București' }, apps: ap, conns });
     }, 1000);
   }
   if (o.cmd === 'history') {
@@ -1027,9 +1069,9 @@ function demoHandle(o) {
     const tl = []; for (let t = Math.floor((now - o.hours * 3600) / b) * b; t <= now; t += b) tl.push({ t, down: Math.random() * 5e8 * (1 + Math.sin(t / 8000)), up: Math.random() * 6e7 });
     onMessage({ type: 'history', hours: o.hours, bucket: b, timeline: tl, apps: S.apps.map(a => ({ key: a.key, name: a.name, path: a.path, up: a.totUp, down: a.totDown })), countries: [{ cc: 'US', up: 3e8, down: 2e9, apps: 5 }, { cc: 'DE', up: 1e8, down: 9e8, apps: 3 }, { cc: 'RO', up: 5e7, down: 3e8, apps: 2 }, { cc: 'NL', up: 2e7, down: 2e8, apps: 2 }],
       hosts: [{ host: 'www.google.com', cc: 'US', up: 1e8, down: 9e8, apps: 2 }, { host: 'steamcdn-a.akamaihd.net', cc: 'DE', up: 1e6, down: 7e8, apps: 1 }], ports: [{ port: 443, proto: 'TCP', bytes: 3e9 }, { port: 80, proto: 'TCP', bytes: 2e8 }, { port: 3478, proto: 'UDP', bytes: 9e7 }],
-      events: [{ ts: now - 300, kind: 'new_app', app: 'x', appName: 'Discord', detail: 'Prima conexiune la internet → gateway.discord.gg:443 (United States)' }, { ts: now - 1200, kind: 'block', appName: 'Telemetry Agent', app: 'y', detail: 'Aplicație blocată' }] });
+      events: [{ ts: now - 300, kind: 'new_app', app: 'x', appName: 'Discord', detail: tr('Prima conexiune la internet', 'First internet connection') + ' → gateway.discord.gg:443 (United States)' }, { ts: now - 1200, kind: 'block', appName: 'Telemetry Agent', app: 'y', detail: tr('Aplicație blocată', 'App blocked') }] });
   }
   if (o.cmd === 'appList') onMessage({ type: 'appList', apps: S.apps.map(a => ({ key: a.key, name: a.name, path: a.path })) });
-  if (o.cmd === 'toggleApp') toast('(demo) ' + (o.block ? 'blocat' : 'permis'), 'ok');
-  if (o.cmd === 'saveRule') onMessage({ type: 'toast', kind: 'ok', text: '(demo) Regula a fost salvată.' });
+  if (o.cmd === 'toggleApp') toast('(demo) ' + (o.block ? tr('blocat', 'blocked') : tr('permis', 'allowed')), 'ok');
+  if (o.cmd === 'saveRule') onMessage({ type: 'toast', kind: 'ok', text: tr('(demo) Regula a fost salvată.', '(demo) Rule saved.') });
 }

@@ -65,12 +65,12 @@ public sealed class MainWindow : Window
                 a.Handled = true;
                 try { Process.Start(new ProcessStartInfo(a.Uri) { UseShellExecute = true }); } catch { }
             };
-            cw.Navigate("https://app.fallensec/index.html");
+            cw.Navigate(PageUrl);
         }
         catch (Exception e)
         {
             Log.W("WebView2: " + e);
-            MessageBox.Show("Nu pot porni interfața (WebView2):\n" + e.Message, "FallenSec", MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show(L.T("Nu pot porni interfața (WebView2):\n", "Cannot start the interface (WebView2):\n") + e.Message, "FallenSec", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 
@@ -82,6 +82,8 @@ public sealed class MainWindow : Window
             try { _web.CoreWebView2?.PostWebMessageAsJson(json); } catch { }
         });
     }
+
+    static string PageUrl => "https://app.fallensec/index.html?lang=" + L.Code;
 
     void Send(object o) => Post(JsonSerializer.Serialize(o, Json.Opt));
     void Toast(string text, string kind = "info") => Send(new { type = "toast", kind, text });
@@ -109,17 +111,17 @@ public sealed class MainWindow : Window
                     });
                     break;
                 case "toggleApp":
-                    if (!_engine.IsAdmin) { Toast("Pentru blocare, pornește FallenSec ca administrator.", "error"); break; }
+                    if (!_engine.IsAdmin) { Toast(L.T("Pentru blocare, pornește FallenSec ca administrator.", "To block apps, run FallenSec as administrator."), "error"); break; }
                     _engine.SetAppBlocked(S("key"), B("block"));
                     break;
                 case "saveRule":
-                    if (!_engine.IsAdmin) { Toast("Pentru reguli, pornește FallenSec ca administrator.", "error"); break; }
+                    if (!_engine.IsAdmin) { Toast(L.T("Pentru reguli, pornește FallenSec ca administrator.", "To use rules, run FallenSec as administrator."), "error"); break; }
                     var rule = m.GetProperty("rule").Deserialize<Rule>(Json.Opt)!;
-                    try { _engine.Rules.Upsert(rule); Toast("Regula a fost salvată.", "ok"); }
+                    try { _engine.Rules.Upsert(rule); Toast(L.T("Regula a fost salvată.", "Rule saved."), "ok"); }
                     catch (ArgumentException ex) { Toast(ex.Message, "error"); }
                     break;
                 case "toggleRule": _engine.Rules.SetEnabled(S("id"), B("enabled")); break;
-                case "deleteRule": _engine.Rules.Delete(S("id")); Toast("Regula a fost ștearsă.", "ok"); break;
+                case "deleteRule": _engine.Rules.Delete(S("id")); Toast(L.T("Regula a fost ștearsă.", "Rule deleted."), "ok"); break;
                 case "history":
                     int hours = m.TryGetProperty("hours", out var h) ? h.GetInt32() : 24;
                     var app = S("app"); var appF = string.IsNullOrEmpty(app) ? null : app;
@@ -130,7 +132,7 @@ public sealed class MainWindow : Window
                     });
                     break;
                 case "clearHistory":
-                    Task.Run(() => { _engine.Db?.Clear(); Toast("Istoricul a fost șters.", "ok"); });
+                    Task.Run(() => { _engine.Db?.Clear(); Toast(L.T("Istoricul a fost șters.", "History cleared."), "ok"); });
                     break;
                 case "saveSettings":
                     var ns = m.GetProperty("settings").Deserialize<Settings>(Json.Opt)!;
@@ -143,14 +145,25 @@ public sealed class MainWindow : Window
                     st.Save();
                     if (startupChanged) Task.Run(_engine.ApplyStartup);
                     if (homeChanged) Task.Run(_engine.ResolveHomeAsync);
-                    Toast("Setările au fost salvate.", "ok");
+                    Toast(L.T("Setările au fost salvate.", "Settings saved."), "ok");
+                    break;
+                case "setLanguage":
+                    var lang = S("language");
+                    _engine.Settings.Language = lang is "ro" or "en" ? lang : "auto";
+                    _engine.Settings.Save();
+                    L.Set(_engine.Settings.Language);
+                    ((App)Application.Current).ApplyTrayLanguage();
+                    _engine.RefreshBlockStatus(true);
+                    // reîncarcă interfața în noua limbă (unele denumiri din sistem se schimbă după repornire)
+                    _ready = false;
+                    _web.CoreWebView2?.Navigate(PageUrl + "#settings");
                     break;
                 case "panic":
-                    if (!_engine.IsAdmin) { Toast("Necesită administrator.", "error"); break; }
+                    if (!_engine.IsAdmin) { Toast(L.T("Necesită administrator.", "Administrator rights required."), "error"); break; }
                     _engine.SetPanic(B("on"));
                     break;
                 case "killConn":
-                    Toast(_engine.KillConn(S("id")) ? "Conexiunea a fost închisă." : "Nu am putut închide conexiunea (doar TCP IPv4).", "info");
+                    Toast(_engine.KillConn(S("id")) ? L.T("Conexiunea a fost închisă.", "Connection closed.") : L.T("Nu am putut închide conexiunea (doar TCP IPv4).", "Could not close the connection (TCP IPv4 only)."), "info");
                     break;
                 case "reveal":
                     var p = S("path");
@@ -162,15 +175,15 @@ public sealed class MainWindow : Window
                 case "enableFirewall":
                     Task.Run(() =>
                     {
-                        try { _engine.Fw.EnableAllProfiles(); _engine.RefreshBlockStatus(true); Toast("Windows Firewall a fost pornit.", "ok"); }
-                        catch (Exception ex) { Toast("Eroare: " + ex.Message, "error"); }
+                        try { _engine.Fw.EnableAllProfiles(); _engine.RefreshBlockStatus(true); Toast(L.T("Windows Firewall a fost pornit.", "Windows Firewall turned on."), "ok"); }
+                        catch (Exception ex) { Toast(L.T("Eroare: ", "Error: ") + ex.Message, "error"); }
                     });
                     break;
                 case "appList":
                     Send(new { type = "appList", apps = _engine.AppList() });
                     break;
                 case "browseApp":
-                    var dlg = new Microsoft.Win32.OpenFileDialog { Filter = "Aplicații (*.exe)|*.exe|Toate fișierele|*.*", Title = "Alege aplicația" };
+                    var dlg = new Microsoft.Win32.OpenFileDialog { Filter = L.T("Aplicații (*.exe)|*.exe|Toate fișierele|*.*", "Applications (*.exe)|*.exe|All files|*.*"), Title = L.T("Alege aplicația", "Choose the application") };
                     if (dlg.ShowDialog(this) == true)
                     {
                         string name = Path.GetFileName(dlg.FileName);
@@ -193,7 +206,7 @@ public sealed class MainWindow : Window
         catch (Exception ex)
         {
             Log.W($"Cmd {cmd}: {ex}");
-            Toast("Eroare: " + ex.Message, "error");
+            Toast(L.T("Eroare: ", "Error: ") + ex.Message, "error");
         }
     }
 

@@ -8,8 +8,27 @@ namespace FallenSec.Core;
 
 public static class AppInfoConst
 {
-    public const string Version = "1.1";
+    public const string Version = "1.2";
     public const string Copyright = "© 2026 Fallen";
+}
+
+/// <summary>Limba interfeței: "ro" sau "en". Setarea "auto" urmează limba Windows.</summary>
+public static class L
+{
+    public static bool En { get; private set; }
+    public static string Code => En ? "en" : "ro";
+
+    public static void Set(string? setting)
+    {
+        En = setting switch
+        {
+            "en" => true,
+            "ro" => false,
+            _ => !System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName.Equals("ro", StringComparison.OrdinalIgnoreCase),
+        };
+    }
+
+    public static string T(string ro, string en) => En ? en : ro;
 }
 
 public static class Paths
@@ -92,6 +111,8 @@ public sealed class Settings
     public double? HomeLon { get; set; }
     public string? HomeCity { get; set; }
     public bool Panic { get; set; }
+    /// <summary>"auto" (limba Windows), "ro" sau "en".</summary>
+    public string Language { get; set; } = "auto";
 
     public static Settings LoadOrDefault() => Json.Load<Settings>(Paths.Settings) ?? new Settings();
     public void Save() => Json.Save(Paths.Settings, this);
@@ -115,9 +136,10 @@ public sealed class ProcessCache
     readonly Dictionary<string, AppInfo> _byKey = new(StringComparer.OrdinalIgnoreCase);
     static readonly string WinDir = Environment.GetFolderPath(Environment.SpecialFolder.Windows);
 
-    public static readonly AppInfo SystemApp = new() { Key = "system", Path = "System", Name = "Sistem Windows (kernel)", Publisher = "Microsoft", IsSystem = true };
-    public static readonly AppInfo IdleApp = new() { Key = "idle", Path = "", Name = "Conexiuni închise (TIME_WAIT)", IsSystem = true };
-    static readonly AppInfo Unknown = new() { Key = "unknown", Path = "", Name = "Proces necunoscut", IsSystem = true };
+    // L.Set() este apelat în App.OnStartup înainte de orice acces la aceste câmpuri
+    public static readonly AppInfo SystemApp = new() { Key = "system", Path = "System", Name = L.T("Sistem Windows (kernel)", "Windows System (kernel)"), Publisher = "Microsoft", IsSystem = true };
+    public static readonly AppInfo IdleApp = new() { Key = "idle", Path = "", Name = L.T("Conexiuni închise (TIME_WAIT)", "Closed connections (TIME_WAIT)"), IsSystem = true };
+    static readonly AppInfo Unknown = new() { Key = "unknown", Path = "", Name = L.T("Proces necunoscut", "Unknown process"), IsSystem = true };
 
     public IEnumerable<AppInfo> Known => _byKey.Values;
     public AppInfo? ByKey(string key) => _byKey.TryGetValue(key, out var a) ? a : null;
@@ -166,7 +188,7 @@ public sealed class ProcessCache
         }
         catch { }
         var exe = System.IO.Path.GetFileName(path);
-        if (exe.Equals("svchost.exe", StringComparison.OrdinalIgnoreCase)) name = "Servicii Windows (svchost)";
+        if (exe.Equals("svchost.exe", StringComparison.OrdinalIgnoreCase)) name = L.T("Servicii Windows (svchost)", "Windows services (svchost)");
         a = new AppInfo
         {
             Key = key, Path = path, Name = name, Publisher = pub,
