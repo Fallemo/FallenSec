@@ -15,7 +15,8 @@ See every connection your PC makes on a live world map, cut any app off the inte
 - **History**: traffic charts, plus the top apps, countries, destinations and ports, and an event log.
 - **Panic button**: blocks all internet traffic while the local network keeps working.
 - Notification when an app goes online for the first time.
-- Runs from the system tray.
+- **Built-in updates**: checks GitHub Releases, shows what's new and updates itself with one click (SHA-256 verified, automatic rollback on failure).
+- English and Romanian interface; runs from the system tray.
 
 ## How it works
 
@@ -38,7 +39,8 @@ The executable is not code-signed, so SmartScreen or your antivirus may warn on 
 - **Blocks are persistent.** They stay active after FallenSec is closed and after a reboot. To undo everything, delete your rules (or switch the apps back ON) **before** you remove the app.
 - **Network requests the app makes itself:**
   - It downloads the DB-IP Lite databases (~60 MB) from `download.db-ip.com` on first start and when they are refreshed.
-  - It asks `api.ipify.org` for your public IP, to place "home" on the map. To stop this, turn off *Settings → Hartă → Detectează automat locația mea* and enter your location manually.
+  - It asks `api.ipify.org` for your public IP, to place "home" on the map. To stop this, turn off *Settings → Map → Detect my location automatically* and enter your location manually.
+  - It asks `api.github.com` for the latest FallenSec release, at startup and once a day, and downloads it from GitHub only when you click *Update now*. To stop the automatic check, turn off *Settings → Updates → Check automatically*.
 - There is no telemetry and no account. Nothing else leaves your PC.
 - Use it at your own risk: this is a hobby project, not a security product.
 

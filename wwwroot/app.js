@@ -22,6 +22,10 @@ if (EN) {
 }
 
 const CHANGELOG = [
+  { v: '1.3', d: '13.11.2026', items: [
+    ['Actualizări automate: FallenSec verifică pe GitHub la pornire și o dată pe zi, arată noutățile și se actualizează singur cu un click (Setări → Actualizări sau meniul din tray)', 'Automatic updates: FallenSec checks GitHub at startup and once a day, shows what\'s new and updates itself with one click (Settings → Updates or the tray menu)'],
+    ['Pachetul descărcat e verificat cu SHA-256; dacă ceva nu merge, versiunea curentă rămâne neatinsă', 'The downloaded package is verified with SHA-256; if anything goes wrong, the current version is left untouched'],
+  ]},
   { v: '1.2', d: '13.11.2026', items: [
     ['Interfață în engleză și română: limba se alege automat după Windows și se poate schimba din Setări → General', 'English and Romanian interface: the language follows Windows and can be changed in Settings → General'],
     ['Notificările, meniul din tray și mesajele de stare sunt traduse și ele', 'Notifications, the tray menu and status messages are translated too'],
@@ -79,9 +83,10 @@ const SVG = {
 
 const S = {
   apps: [], appMap: new Map(), conns: [], frozen: null, status: {}, home: null, hist: [], up: 0, down: 0,
-  rules: [], settings: {}, version: '1.2', view: 'map', icons: new Map(), expanded: new Set(),
+  rules: [], settings: {}, version: '1.3', view: 'map', icons: new Map(), expanded: new Set(),
   mapSel: null, mapApp: null, appFilter: 'all', appSort: { k: 'rate', d: -1 }, connProto: 'all', connNet: 'all', connSort: { k: 'down', d: -1 },
   histHours: 24, histApp: '', history: null, appList: [],
+  update: null, updDismissed: null,
 };
 const pending = new Map(); // key → {block, until}
 
@@ -99,6 +104,7 @@ function onMessage(m) {
     case 'history': S.history = m; renderHistory(); break;
     case 'appList': S.appList = m.apps; fillHistApps(); Modal.onAppList?.(); break;
     case 'browsedApp': Modal.onBrowsed?.(m); break;
+    case 'update': Upd.onMessage(m); break;
   }
 }
 
@@ -182,6 +188,8 @@ function updateChrome() {
   if (st.block?.banner) b.push(`<div class="banner warn">${esc(st.block.banner)} ${st.block.canEnableWinFw ? `<button class="btn sm" data-act="enableFw">${tr('Pornește Windows Firewall', 'Turn on Windows Firewall')}</button>` : ''}${st.block.engine !== 'WFP' ? ` <button class="btn sm" data-act="useWfp">${tr('Folosește WFP', 'Use WFP')}</button>` : ''}</div>`);
   if (st.admin && st.etwError) b.push(`<div class="banner warn">${esc(st.etwError)}</div>`);
   if (st.rules) b.push(`<div class="banner err">${esc(st.rules)}</div>`);
+  const up = S.update;
+  if (up?.state === 'available' && S.updDismissed !== up.tag) b.push(`<div class="banner info"><b>${tr(`FallenSec ${esc(up.tag)} este disponibil.`, `FallenSec ${esc(up.tag)} is available.`)}</b> ${tr(`Ai versiunea ${esc(up.current)}.`, `You have version ${esc(up.current)}.`)} <button class="btn primary sm" data-act="updOpen">${tr('Vezi noutățile și actualizează', 'See what\'s new and update')}</button><button class="btn ghost sm" data-act="updLater" style="margin-left:0">${tr('Mai târziu', 'Later')}</button></div>`);
   if (st.geo && !st.geoReady) b.push(`<div class="banner info">${esc(st.geo)} — ${tr('harta se va popula după descărcarea bazei de geolocalizare.', 'the map will fill in once the geolocation database is downloaded.')}</div>`);
   const bs = b.join('');
   if (bs !== lastBanners) { $('#banners').innerHTML = bs; lastBanners = bs; }
@@ -203,6 +211,8 @@ $('#banners').addEventListener('click', e => {
   if (a === 'panicOff') send({ cmd: 'panic', on: false });
   if (a === 'enableFw') send({ cmd: 'enableFirewall' });
   if (a === 'useWfp') send({ cmd: 'blockEngine', engine: 'wfp' });
+  if (a === 'updOpen') Upd.show();
+  if (a === 'updLater') { S.updDismissed = S.update?.tag; updateChrome(); }
 });
 $('#toTray').onclick = () => send({ cmd: 'hideToTray' });
 $('#panicBtn').onclick = () => {
@@ -870,8 +880,11 @@ $('#rulesList').addEventListener('click', e => {
 
 // ---------------------------------------------------------------- modal
 const Modal = {
-  open(html) { $('#modalBox').innerHTML = html; $('#modal').classList.remove('hidden'); $('#modalBox').querySelectorAll('[data-close]').forEach(b => b.onclick = () => this.close()); },
-  close() { $('#modal').classList.add('hidden'); this.onAppList = this.onBrowsed = null; this.pendingSave = false; },
+  open(html) { this.kind = null; $('#modalBox').innerHTML = html; $('#modal').classList.remove('hidden'); $('#modalBox').querySelectorAll('[data-close]').forEach(b => b.onclick = () => this.close()); },
+  close() {
+    if (this.kind === 'update' && ['downloading', 'restarting'].includes(S.update?.state)) return; // nu închidem în timpul instalării
+    $('#modal').classList.add('hidden'); this.onAppList = this.onBrowsed = null; this.pendingSave = false; this.kind = null;
+  },
   rule(init) {
     const r = Object.assign({ kind: 'custom', enabled: true, direction: 'out', protocol: 'any', target: 'any', value: '', ports: '', note: '', appPath: null, appName: null }, init || {});
     if (r.kind === 'app') return;
@@ -966,6 +979,74 @@ function confirmBox(title, text, okText, onOk, danger, onCancel) {
   $('#cOk').onclick = () => { Modal.close(); onOk(); };
   $('#cCancel').onclick = () => { Modal.close(); onCancel && onCancel(); };
 }
+// ---------------------------------------------------------------- update
+const Upd = {
+  onMessage(m) {
+    S.update = m;
+    updateChrome();
+    this.renderSetting();
+    if (m.open || Modal.kind === 'update') this.show();
+  },
+  show() {
+    const u = S.update; if (!u) { send({ cmd: 'checkUpdate' }); return; }
+    const mb = b => (b / 1048576).toFixed(1) + ' MB';
+    const page = u.page ? `<a class="btn ghost" href="${esc(u.page)}" target="_blank">${tr('Pagina versiunii', 'Release page')}</a>` : '';
+    const close = `<button class="btn ghost" data-close>${tr('Închide', 'Close')}</button>`;
+    let html;
+    switch (u.state) {
+      case 'checking':
+        html = `<h2>${tr('Actualizări', 'Updates')}</h2><div class="upd-status">${tr('Se verifică pe GitHub...', 'Checking GitHub...')}</div><div class="pbar indet"><i></i></div>
+          <div class="modal-actions">${close}</div>`; break;
+      case 'latest':
+        html = `<h2>${tr('Actualizări', 'Updates')}</h2><div class="upd-status">✔ ${tr(`Ai deja ultima versiune (${esc(u.current)}).`, `You already have the latest version (${esc(u.current)}).`)}</div>
+          <div class="modal-actions">${close}</div>`; break;
+      case 'available':
+        html = `<h2>${tr(`FallenSec ${esc(u.tag)} este disponibil`, `FallenSec ${esc(u.tag)} is available`)}</h2>
+          <div class="upd-sub">${tr(`Ai versiunea ${esc(u.current)}`, `You have version ${esc(u.current)}`)}${u.size ? ` · ${tr('descărcare', 'download')} ${mb(u.size)}` : ''}</div>
+          <div class="upd-notes">${mdLite(u.notes) || tr('(fără descriere)', '(no description)')}</div>
+          <div class="upd-hint">${tr('FallenSec descarcă versiunea nouă de pe GitHub, verifică suma de control SHA-256, o instalează peste cea curentă și repornește. Regulile, setările și istoricul rămân; blocările rămân active tot timpul.', 'FallenSec downloads the new version from GitHub, checks its SHA-256 checksum, installs it over the current one and restarts. Rules, settings and history are kept; blocks stay active the whole time.')}</div>
+          <div class="modal-actions">${page}<button class="btn ghost" data-close>${tr('Mai târziu', 'Later')}</button><button class="btn primary" id="updGo">${tr('Actualizează acum', 'Update now')}</button></div>`; break;
+      case 'downloading': {
+        const pct = u.total ? Math.min(100, 100 * u.done / u.total) : null;
+        html = `<h2>${tr(`Se actualizează la ${esc(u.tag)}`, `Updating to ${esc(u.tag)}`)}</h2>
+          <div class="upd-status">${tr('Se descarcă...', 'Downloading...')} ${mb(u.done || 0)}${u.total ? ' / ' + mb(u.total) : ''}</div>
+          <div class="pbar ${pct == null ? 'indet' : ''}"><i style="${pct == null ? '' : `width:${pct.toFixed(1)}%`}"></i></div>
+          <div class="upd-hint">${tr('Nu închide FallenSec. După descărcare, fișierele sunt verificate și înlocuite, apoi aplicația repornește singură.', 'Don\'t close FallenSec. After the download the files are verified and replaced, then the app restarts by itself.')}</div>`; break;
+      }
+      case 'restarting':
+        html = `<h2>${tr(`Se actualizează la ${esc(u.tag)}`, `Updating to ${esc(u.tag)}`)}</h2><div class="upd-status">✔ ${tr('Instalat. FallenSec se repornește...', 'Installed. FallenSec is restarting...')}</div><div class="pbar"><i style="width:100%"></i></div>`; break;
+      case 'error':
+        html = `<h2>${tr('Actualizări', 'Updates')}</h2><div class="upd-status err">${esc(u.error || '')}</div>
+          <div class="modal-actions">${u.page ? page : `<a class="btn ghost" href="https://github.com/Fallemo/FallenSec/releases" target="_blank">${tr('Pagina versiunilor', 'Releases page')}</a>`}${close}<button class="btn primary" id="updRetry">${tr('Încearcă din nou', 'Try again')}</button></div>`; break;
+      default: return;
+    }
+    // la descărcare actualizăm doar bara, ca să nu „clipească” fereastra
+    if (Modal.kind === 'update' && u.state === 'downloading' && $('#modalBox .pbar') && this.lastState === 'downloading') {
+      const pct = u.total ? Math.min(100, 100 * u.done / u.total) : null;
+      $('#modalBox .upd-status').textContent = `${tr('Se descarcă...', 'Downloading...')} ${mb(u.done || 0)}${u.total ? ' / ' + mb(u.total) : ''}`;
+      if (pct != null) $('#modalBox .pbar i').style.width = pct.toFixed(1) + '%';
+    } else {
+      Modal.open(html); Modal.kind = 'update';
+    }
+    this.lastState = u.state;
+    $('#updGo')?.addEventListener('click', () => send({ cmd: 'installUpdate' }));
+    $('#updRetry')?.addEventListener('click', () => send({ cmd: 'checkUpdate' }));
+  },
+  renderSetting() {
+    const el = $('#updInfo'); if (!el) return;
+    const u = S.update;
+    el.textContent = u?.state === 'available' ? tr(`Versiune nouă disponibilă: ${u.tag}`, `New version available: ${u.tag}`)
+      : u?.state === 'latest' ? tr('Ai ultima versiune.', 'You have the latest version.')
+      : tr('Actualizările vin de pe GitHub (Fallemo/FallenSec).', 'Updates come from GitHub (Fallemo/FallenSec).');
+    const btn = $('#updCheck'); if (btn) btn.textContent = u?.state === 'available' ? tr('Actualizează...', 'Update...') : tr('Verifică acum', 'Check now');
+  },
+};
+/** Markdown minimal pentru notele de pe GitHub: escape, **bold**, [text](link) → text. */
+function mdLite(s) {
+  return esc((s || '').replace(/\r/g, '').replace(/\[([^\]]+)\]\([^)]+\)/g, '$1').trim())
+    .replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>').replace(/`([^`]+)`/g, '<span class="mono">$1</span>').replace(/^#+\s*/gm, '');
+}
+
 function toast(text, kind = 'info') {
   const t = document.createElement('div'); t.className = 'toast ' + kind; t.textContent = text;
   $('#toasts').appendChild(t); setTimeout(() => t.remove(), kind === 'error' ? 6500 : 3500);
@@ -1003,11 +1084,17 @@ function renderSettings() {
       <div class="set"><div class="st"><b>${tr('Șterge istoricul', 'Clear history')}</b><span>${tr('Elimină traficul și evenimentele salvate.', 'Removes the saved traffic and events.')}</span></div><button class="btn danger sm" id="clearHist">${tr('Șterge', 'Clear')}</button></div>
       <div class="set"><div class="st"><b>${tr('Baza de geolocalizare', 'Geolocation database')}</b><span>${esc(S.status.geo || '')}</span></div><button class="btn sm" id="geoUpd">${tr('Actualizează acum', 'Update now')}</button></div>
     </div>
+    <div class="set-group"><h3>${tr('Actualizări', 'Updates')}</h3>
+      <div class="set"><div class="st"><b>FallenSec ${esc(S.version)}</b><span id="updInfo"></span></div><button class="btn sm" id="updCheck">${tr('Verifică acum', 'Check now')}</button></div>
+      ${row('autoUpdateCheck', tr('Verifică automat', 'Check automatically'), tr('La pornire și apoi o dată pe zi, pe GitHub. Nimic nu se instalează fără acordul tău.', 'At startup and then once a day, on GitHub. Nothing is installed without your consent.'))}
+    </div>
     <div class="set-group"><h3>${tr('Aplicație', 'Application')}</h3>
       <div class="set"><div class="st"><b>${tr('Ieșire din FallenSec', 'Exit FallenSec')}</b><span>${tr('Regulile de blocare rămân active chiar și după ieșire și după repornirea PC-ului.', 'Block rules stay active even after you exit and after a reboot.')}</span></div><button class="btn sm" id="exitApp">${tr('Ieșire', 'Exit')}</button></div>
     </div>`;
   const save = () => send({ cmd: 'saveSettings', settings: S.settings });
   segInit('#langSel', v => { S.settings.language = v; send({ cmd: 'setLanguage', language: v }); });
+  $('#updCheck').onclick = () => S.update?.state === 'available' ? Upd.show() : send({ cmd: 'checkUpdate' });
+  Upd.renderSetting();
   $$('#settingsForm input[data-k]').forEach(i => i.onchange = () => { S.settings[i.dataset.k] = i.checked; if (i.dataset.k === 'homeAuto') $('#homeManual').classList.toggle('hidden', i.checked); save(); });
   ['hLat', 'hLon', 'hCity'].forEach(id => $('#' + id).onchange = () => { S.settings.homeLat = +$('#hLat').value; S.settings.homeLon = +$('#hLon').value; S.settings.homeCity = $('#hCity').value; save(); });
   $('#hDays').onchange = e => { S.settings.historyDays = Math.max(1, Math.min(365, +e.target.value || 30)); save(); };
@@ -1040,7 +1127,7 @@ setInterval(() => { if (S.view === 'history') loadHistory(); }, 60000);
 // ---------------------------------------------------------------- demo (doar în browser, fără aplicație)
 function demoHandle(o) {
   if (o.cmd === 'ready') {
-    onMessage({ type: 'init', version: '1.2', settings: { closeToTray: true, minimizeToTray: true, notifyNewApps: true, showLan: true, homeAuto: true, historyDays: 30 }, rules: [
+    onMessage({ type: 'init', version: '1.3', settings: { autoUpdateCheck: true, closeToTray: true, minimizeToTray: true, notifyNewApps: true, showLan: true, homeAuto: true, historyDays: 30 }, rules: [
       { id: 'a1', kind: 'app', enabled: true, appPath: 'C:\\Program Files\\Telemetry\\tele.exe', appName: 'Telemetry Agent', direction: 'both', target: 'any', fwCount: 2 },
       { id: 'b2', kind: 'custom', enabled: true, appPath: null, appName: null, direction: 'out', protocol: 'any', target: 'domain', value: 'doubleclick.net', resolvedIps: ['1.1.1.1', '2.2.2.2'], fwCount: 1 },
       { id: 'c3', kind: 'custom', enabled: false, appPath: 'C:\\Games\\game.exe', appName: 'Game', direction: 'out', protocol: 'any', target: 'country', value: 'CN', fwCount: 0 }] });
@@ -1073,5 +1160,18 @@ function demoHandle(o) {
   }
   if (o.cmd === 'appList') onMessage({ type: 'appList', apps: S.apps.map(a => ({ key: a.key, name: a.name, path: a.path })) });
   if (o.cmd === 'toggleApp') toast('(demo) ' + (o.block ? tr('blocat', 'blocked') : tr('permis', 'allowed')), 'ok');
+  if (o.cmd === 'checkUpdate') {
+    onMessage({ type: 'update', state: 'checking', current: '1.3', open: true });
+    setTimeout(() => onMessage({ type: 'update', state: 'available', tag: 'v1.4', current: '1.3', size: 5300000, page: 'https://github.com/Fallemo/FallenSec/releases', open: true,
+      notes: '**Demo release notes.**\n\n- First change\n- Second change with `code`\n\nRequires the [.NET 8 Desktop Runtime](https://dotnet.microsoft.com).' }), 700);
+  }
+  if (o.cmd === 'installUpdate') {
+    let done = 0; const total = 5300000;
+    const t = setInterval(() => {
+      done = Math.min(total, done + 700000);
+      onMessage({ type: 'update', state: 'downloading', tag: 'v1.4', current: '1.3', done, total, open: true });
+      if (done >= total) { clearInterval(t); setTimeout(() => onMessage({ type: 'update', state: 'restarting', tag: 'v1.4', current: '1.3', open: true }), 400); }
+    }, 300);
+  }
   if (o.cmd === 'saveRule') onMessage({ type: 'toast', kind: 'ok', text: tr('(demo) Regula a fost salvată.', '(demo) Rule saved.') });
 }

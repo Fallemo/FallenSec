@@ -285,3 +285,16 @@ tr.expand td{background:#0b1222!important;padding:0}
 .mp-row .cc-big .cc{font-size:11px;padding:2px 5px}
 .app-strip{display:flex;gap:3px;margin-top:3px}
 .app-ico.xs{width:14px;height:14px}
+
+/* ---------- update ---------- */
+.upd-sub{color:var(--muted);margin:-8px 0 12px}
+.upd-notes{max-height:300px;overflow:auto;white-space:pre-wrap;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;line-height:1.6;user-select:text}
+.upd-notes b{color:#fff}
+.upd-hint{color:var(--dim);font-size:11.5px;margin-top:10px}
+.upd-status{margin:6px 0 10px}
+.upd-status.err{color:#fca5a5}
+.pbar{height:8px;background:var(--panel2);border-radius:6px;overflow:hidden;margin:8px 0 4px}
+.pbar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--cyan),var(--violet));transition:width .25s}
+.pbar.indet i{width:35%;animation:pbar 1.1s ease-in-out infinite}
+@keyframes pbar{0%{margin-left:-35%}100%{margin-left:100%}}
+.modal-actions a.btn{text-decoration:none;color:var(--text)}

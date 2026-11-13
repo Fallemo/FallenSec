@@ -8,7 +8,7 @@ namespace FallenSec.Core;
 
 public static class AppInfoConst
 {
-    public const string Version = "1.2";
+    public const string Version = "1.3";
     public const string Copyright = "© 2026 Fallen";
 }
 
@@ -113,6 +113,8 @@ public sealed class Settings
     public bool Panic { get; set; }
     /// <summary>"auto" (limba Windows), "ro" sau "en".</summary>
     public string Language { get; set; } = "auto";
+    /// <summary>Verifică pe GitHub dacă există versiune nouă (la pornire și apoi o dată pe zi).</summary>
+    public bool AutoUpdateCheck { get; set; } = true;
 
     public static Settings LoadOrDefault() => Json.Load<Settings>(Paths.Settings) ?? new Settings();
     public void Save() => Json.Save(Paths.Settings, this);

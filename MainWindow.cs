@@ -53,6 +53,8 @@ public sealed class MainWindow : Window
             var env = await CoreWebView2Environment.CreateAsync(null, Paths.WebCache);
             await _web.EnsureCoreWebView2Async(env);
             var cw = _web.CoreWebView2;
+            // după o actualizare, app.js/app.css nu trebuie luate din cache-ul vechi
+            try { await cw.Profile.ClearBrowsingDataAsync(CoreWebView2BrowsingDataKinds.DiskCache | CoreWebView2BrowsingDataKinds.CacheStorage); } catch { }
             var root = Path.Combine(AppContext.BaseDirectory, "wwwroot");
             cw.SetVirtualHostNameToFolderMapping("app.fallensec", root, CoreWebView2HostResourceAccessKind.Allow);
             cw.Settings.AreDefaultContextMenusEnabled = false;
@@ -87,6 +89,7 @@ public sealed class MainWindow : Window
 
     void Send(object o) => Post(JsonSerializer.Serialize(o, Json.Opt));
     void Toast(string text, string kind = "info") => Send(new { type = "toast", kind, text });
+    public void SendUpdate(Dictionary<string, object?> state) => Send(state);
     void SendRules() => Send(new { type = "rules", rules = _engine.Rules.Snapshot() });
 
     void OnMessage(object? sender, CoreWebView2WebMessageReceivedEventArgs e)
@@ -109,6 +112,14 @@ public sealed class MainWindow : Window
                         type = "init", version = AppInfoConst.Version, copyright = AppInfoConst.Copyright,
                         settings = _engine.Settings, rules = _engine.Rules.Snapshot(), dataDir = Paths.Data
                     });
+                    // starea actualizării (fără a redeschide fereastra de update la fiecare reîncărcare)
+                    if (((App)Application.Current).UpdateState is { } us) Send(new Dictionary<string, object?>(us) { ["open"] = false });
+                    break;
+                case "checkUpdate":
+                    ((App)Application.Current).CheckForUpdates(manual: true);
+                    break;
+                case "installUpdate":
+                    ((App)Application.Current).InstallUpdate();
                     break;
                 case "toggleApp":
                     if (!_engine.IsAdmin) { Toast(L.T("Pentru blocare, pornește FallenSec ca administrator.", "To block apps, run FallenSec as administrator."), "error"); break; }
@@ -142,6 +153,7 @@ public sealed class MainWindow : Window
                     st.StartWithWindows = ns.StartWithWindows; st.StartMinimized = ns.StartMinimized; st.CloseToTray = ns.CloseToTray; st.MinimizeToTray = ns.MinimizeToTray;
                     st.NotifyNewApps = ns.NotifyNewApps; st.ShowLan = ns.ShowLan; st.HistoryDays = Math.Clamp(ns.HistoryDays, 1, 365);
                     st.HomeAuto = ns.HomeAuto; st.HomeLat = ns.HomeLat; st.HomeLon = ns.HomeLon; st.HomeCity = ns.HomeCity;
+                    st.AutoUpdateCheck = ns.AutoUpdateCheck;
                     st.Save();
                     if (startupChanged) Task.Run(_engine.ApplyStartup);
                     if (homeChanged) Task.Run(_engine.ResolveHomeAsync);

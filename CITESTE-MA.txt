@@ -1,4 +1,4 @@
-﻿FallenSec v1.2 - Firewall și monitor de rețea pentru Windows
+﻿FallenSec v1.3 - Firewall și monitor de rețea pentru Windows
 © 2026 Fallen
 =============================================================
 
@@ -51,6 +51,9 @@ BINE DE ȘTIUT
   monitorizarea continuă. Click pe iconiță = redeschide; click dreapta =
   meniu (Deschide / Panică / Ieșire). Tooltip-ul arată vitezele live.
 - Datele (reguli, setări, istoric) sunt în C:\ProgramData\FallenSec.
+- Actualizări: Setări > Actualizări (sau meniul din tray) verifică pe
+  GitHub, descarcă, verifică (SHA-256) și instalează versiunea nouă, apoi
+  repornește aplicația. Verificarea automată se poate opri din Setări.
 
 CREDITE
 -------
@@ -59,6 +62,13 @@ Hartă: Natural Earth / world-atlas. Grafice: d3.js.
 
 ISTORIC VERSIUNI
 ----------------
+v1.3 (13.11.2026)
+- Actualizări automate: FallenSec verifică pe GitHub la pornire și o dată
+  pe zi, arată noutățile și se actualizează singur cu un click (Setări >
+  Actualizări sau meniul din tray > Verifică actualizări).
+- Pachetul descărcat e verificat cu SHA-256; dacă ceva nu merge,
+  versiunea curentă rămâne neatinsă.
+
 v1.2 (13.11.2026)
 - Interfață în engleză și română. Limba se alege automat după Windows
   și se poate schimba din Setări > General > Limba.

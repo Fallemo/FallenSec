@@ -1,4 +1,4 @@
-FallenSec v1.2 - Firewall and network monitor for Windows
+FallenSec v1.3 - Firewall and network monitor for Windows
 (c) 2026 Fallen - https://github.com/Fallemo/FallenSec
 =========================================================
 
@@ -45,7 +45,12 @@ GOOD TO KNOW
 - Network requests made by the app itself: the DB-IP database download
   and api.ipify.org (your public IP, for the map). Turn off
   "Detect my location automatically" in Settings to avoid the latter.
+  It also asks api.github.com for the latest version (at startup and
+  once a day) unless "Check automatically" is off in Settings > Updates.
 - Data (rules, settings, history) is stored in C:\ProgramData\FallenSec.
+- Updates: Settings > Updates (or the tray menu) checks GitHub, downloads,
+  verifies (SHA-256) and installs the new version, then restarts the app.
+  The automatic check can be turned off in Settings.
 
 CREDITS
 -------
