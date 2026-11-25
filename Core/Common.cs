@@ -8,7 +8,7 @@ namespace FallenSec.Core;
 
 public static class AppInfoConst
 {
-    public const string Version = "1.3";
+    public const string Version = "1.4";
     public const string Copyright = "© 2026 Fallen";
 }
 
@@ -105,7 +105,9 @@ public sealed class Settings
     public bool TrayHintShown { get; set; }
     public bool NotifyNewApps { get; set; } = true;
     public bool ShowLan { get; set; } = true;
-    public int HistoryDays { get; set; } = 30;
+    /// <summary>0 = păstrează istoricul pentru totdeauna (implicit din v1.4).</summary>
+    public int HistoryDays { get; set; } = 0;
+    public int SettingsVersion { get; set; }
     public bool HomeAuto { get; set; } = true;
     public double? HomeLat { get; set; }
     public double? HomeLon { get; set; }
@@ -116,7 +118,19 @@ public sealed class Settings
     /// <summary>Verifică pe GitHub dacă există versiune nouă (la pornire și apoi o dată pe zi).</summary>
     public bool AutoUpdateCheck { get; set; } = true;
 
-    public static Settings LoadOrDefault() => Json.Load<Settings>(Paths.Settings) ?? new Settings();
+    public static Settings LoadOrDefault()
+    {
+        var s = Json.Load<Settings>(Paths.Settings);
+        if (s == null) return new Settings { SettingsVersion = 2 };
+        if (s.SettingsVersion < 2)
+        {
+            // v1.4: istoricul nu mai expiră implicit; vechiul implicit (30 de zile) devine „pentru totdeauna”
+            if (s.HistoryDays == 30) s.HistoryDays = 0;
+            s.SettingsVersion = 2;
+            s.Save();
+        }
+        return s;
+    }
     public void Save() => Json.Save(Paths.Settings, this);
 }
 

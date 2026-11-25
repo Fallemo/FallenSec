@@ -19,6 +19,14 @@ public partial class App : System.Windows.Application
         base.OnStartup(e);
         // limba trebuie stabilită înaintea oricărui text (inclusiv câmpurile statice din Core)
         try { L.Set(Settings.LoadOrDefault().Language); } catch { L.Set(null); }
+        if (e.Args.Length >= 2 && e.Args[0] == "--history-test")
+        {
+            string res;
+            try { res = HistoryTest.Run(e.Args[1], e.Args.Length > 2 ? int.Parse(e.Args[2]) : HistoryDb.DetailDays, e.Args.Length > 3 ? int.Parse(e.Args[3]) : HistoryDb.HourDays); } catch (Exception ex) { res = "EROARE: " + ex; }
+            try { File.WriteAllText(Path.Combine(Path.GetTempPath(), "fallensec-history-test.txt"), res); } catch { }
+            Shutdown();
+            return;
+        }
         if (e.Args.Contains("--wfptest"))
         {
             var res = WfpService.SelfTest();

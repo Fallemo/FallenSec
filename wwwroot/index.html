@@ -11,7 +11,7 @@
   <aside id="sidebar">
     <div class="brand">
       <img src="logo.png" alt="">
-      <div><div class="brand-name">FallenSec</div><div class="brand-ver" id="ver">v1.3</div></div>
+      <div><div class="brand-name">FallenSec</div><div class="brand-ver" id="ver">v1.4</div></div>
     </div>
     <nav id="nav">
       <a data-view="map" class="active"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.8 3 2.8 15 0 18M12 3c-2.8 3-2.8 15 0 18"/></svg><span data-en="Map">Hartă</span></a>
@@ -103,12 +103,14 @@
 
     <section id="view-history" class="view">
       <div class="toolbar">
-        <div class="seg" id="histRange"><button data-v="1" data-en="1 hour">1 oră</button><button data-v="24" class="on" data-en="24 hours">24 ore</button><button data-v="168" data-en="7 days">7 zile</button><button data-v="720" data-en="30 days">30 zile</button></div>
+        <div class="seg" id="histRange"><button data-v="1" data-en="1 hour">1 oră</button><button data-v="24" class="on" data-en="24 hours">24 ore</button><button data-v="168" data-en="7 days">7 zile</button><button data-v="720" data-en="30 days">30 zile</button><button data-v="2160" data-en="90 days">90 zile</button><button data-v="8760" data-en="1 year">1 an</button><button data-v="0" data-en="All">Tot</button></div>
         <select id="histApp"><option value="" data-en="All apps">Toate aplicațiile</option></select>
         <button class="btn ghost sm" id="histRefresh" data-en="Refresh">Reîmprospătează</button>
+        <span class="muted" id="histSince"></span>
       </div>
       <div class="kpis" id="histKpis"></div>
       <div class="card"><div class="card-h"><b data-en="Traffic over time">Trafic în timp</b><span class="legend-inline"><i class="dn-bg"></i>download <i class="up-bg"></i>upload</span></div><svg id="histChart"></svg></div>
+      <div class="card hidden" id="histMonthsCard"><div class="card-h"><b data-en="By month">Pe luni</b><span class="muted" id="histMonthsNote"></span></div><div id="histMonths"></div></div>
       <div class="cols">
         <div class="card"><div class="card-h"><b data-en="Top apps">Top aplicații</b></div><div id="histApps"></div></div>
         <div class="card"><div class="card-h"><b data-en="Top countries">Top țări</b></div><div id="histCountries"></div></div>

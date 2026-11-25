@@ -139,7 +139,7 @@ public sealed class MainWindow : Window
                     Task.Run(() =>
                     {
                         try { if (_engine.Db != null) Send(_engine.Db.Query(hours, appF)); }
-                        catch (Exception ex) { Log.W("History query: " + ex); }
+                        catch (Exception ex) { Log.W("History query: " + ex); Send(new { type = "history", error = ex.Message }); }
                     });
                     break;
                 case "clearHistory":
@@ -151,7 +151,7 @@ public sealed class MainWindow : Window
                     bool startupChanged = st.StartWithWindows != ns.StartWithWindows;
                     bool homeChanged = st.HomeAuto != ns.HomeAuto || st.HomeLat != ns.HomeLat || st.HomeLon != ns.HomeLon;
                     st.StartWithWindows = ns.StartWithWindows; st.StartMinimized = ns.StartMinimized; st.CloseToTray = ns.CloseToTray; st.MinimizeToTray = ns.MinimizeToTray;
-                    st.NotifyNewApps = ns.NotifyNewApps; st.ShowLan = ns.ShowLan; st.HistoryDays = Math.Clamp(ns.HistoryDays, 1, 365);
+                    st.NotifyNewApps = ns.NotifyNewApps; st.ShowLan = ns.ShowLan; st.HistoryDays = Math.Clamp(ns.HistoryDays, 0, 36500);
                     st.HomeAuto = ns.HomeAuto; st.HomeLat = ns.HomeLat; st.HomeLon = ns.HomeLon; st.HomeCity = ns.HomeCity;
                     st.AutoUpdateCheck = ns.AutoUpdateCheck;
                     st.Save();

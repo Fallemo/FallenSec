@@ -1,4 +1,4 @@
-FallenSec v1.3 - Firewall and network monitor for Windows
+FallenSec v1.4 - Firewall and network monitor for Windows
 (c) 2026 Fallen - https://github.com/Fallemo/FallenSec
 =========================================================
 
@@ -28,7 +28,8 @@ WHAT IT DOES
 - Rules: detailed rules per app or for the whole PC, by domain
   (with subdomains), IP/CIDR, country, ports, protocol, direction.
 - History: traffic charts, top apps, countries, destinations, ports,
-  event log.
+  event log. History is kept forever (ranges from 1 hour to "All",
+  plus a total for every month).
 - Panic button: cuts all internet traffic, the LAN keeps working.
 - Notification when an app goes online for the first time.
 

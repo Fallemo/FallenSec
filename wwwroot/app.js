@@ -22,6 +22,13 @@ if (EN) {
 }
 
 const CHANGELOG = [
+  { v: '1.4', d: '25.11.2026', items: [
+    ['Istoricul nu se mai șterge după 30 de zile: se păstrează pentru totdeauna (se poate limita din Setări → Istoric și date)', 'History is no longer deleted after 30 days: it is kept forever (you can limit it in Settings → History and data)'],
+    ['Ultimele 30 de zile rămân la nivel de minut; datele mai vechi sunt comprimate automat pe ore, iar după 90 de zile pe zile, cu totaluri exacte, ca baza de date să rămână mică (cam 15–20 MB pe an)', 'The last 30 days stay per minute; older data is compacted automatically per hour, and per day after 90 days, with exact totals, so the database stays small (roughly 15–20 MB per year)'],
+    ['Istoricul se încarcă mai repede (datele perioadei sunt citite o singură dată)', 'History loads faster (the period is read only once)'],
+    ['Istoric: perioade noi 90 zile, 1 an și Tot', 'History: new ranges 90 days, 1 year and All'],
+    ['Istoric: cardul „Pe luni” cu download și upload pentru fiecare lună, plus media lunară', 'History: a “By month” card with download and upload for every month, plus the monthly average'],
+  ]},
   { v: '1.3', d: '13.11.2026', items: [
     ['Actualizări automate: FallenSec verifică pe GitHub la pornire și o dată pe zi, arată noutățile și se actualizează singur cu un click (Setări → Actualizări sau meniul din tray)', 'Automatic updates: FallenSec checks GitHub at startup and once a day, shows what\'s new and updates itself with one click (Settings → Updates or the tray menu)'],
     ['Pachetul descărcat e verificat cu SHA-256; dacă ceva nu merge, versiunea curentă rămâne neatinsă', 'The downloaded package is verified with SHA-256; if anything goes wrong, the current version is left untouched'],
@@ -83,7 +90,7 @@ const SVG = {
 
 const S = {
   apps: [], appMap: new Map(), conns: [], frozen: null, status: {}, home: null, hist: [], up: 0, down: 0,
-  rules: [], settings: {}, version: '1.3', view: 'map', icons: new Map(), expanded: new Set(),
+  rules: [], settings: {}, version: '1.4', view: 'map', icons: new Map(), expanded: new Set(),
   mapSel: null, mapApp: null, appFilter: 'all', appSort: { k: 'rate', d: -1 }, connProto: 'all', connNet: 'all', connSort: { k: 'down', d: -1 },
   histHours: 24, histApp: '', history: null, appList: [],
   update: null, updDismissed: null,
@@ -101,7 +108,9 @@ function onMessage(m) {
       renderSettings(); renderAbout(); renderRules(); break;
     case 'rules': S.rules = m.rules; renderRules(); updateBadges(); if (S.view === 'apps' || S.view === 'map') schedule(); break;
     case 'toast': toast(m.text, m.kind); if (m.kind === 'ok' && Modal.pendingSave) { Modal.pendingSave = false; Modal.close(); } break;
-    case 'history': S.history = m; renderHistory(); break;
+    case 'history':
+      if (m.error) { $('#view-history').classList.remove('loading'); toast(tr('Istoricul nu a putut fi încărcat: ', 'Could not load history: ') + m.error, 'error'); break; }
+      S.history = m; renderHistory(); break;
     case 'appList': S.appList = m.apps; fillHistApps(); Modal.onAppList?.(); break;
     case 'browsedApp': Modal.onBrowsed?.(m); break;
     case 'update': Upd.onMessage(m); break;
@@ -760,7 +769,7 @@ $('#mapApps').addEventListener('click', e => {
 segInit('#histRange', v => { S.histHours = +v; loadHistory(); });
 $('#histApp').onchange = e => { S.histApp = e.target.value; loadHistory(); };
 $('#histRefresh').onclick = loadHistory;
-function loadHistory() { send({ cmd: 'history', hours: S.histHours, app: S.histApp || '' }); }
+function loadHistory() { $('#view-history').classList.add('loading'); send({ cmd: 'history', hours: S.histHours, app: S.histApp || '' }); }
 function fillHistApps() {
   const sel = $('#histApp');
   const items = new Map();
@@ -779,7 +788,7 @@ function hbars(items, colorize = true) {
     <div class="track"><i style="width:${100 * i.down / max}%;background:var(--dn)"></i><i style="width:${100 * i.up / max}%;background:var(--up)"></i></div></div>`).join('') || `<div class="empty">${tr('Fără date încă.', 'No data yet.')}</div>`;
 }
 function renderHistory() {
-  const h = S.history; if (!h) return;
+  const h = S.history; $('#view-history').classList.remove('loading'); if (!h) return;
   fillHistApps();
   const totD = d3.sum(h.timeline, d => d.down), totU = d3.sum(h.timeline, d => d.up);
   $('#histKpis').innerHTML = `<div class="kpi"><span>${tr('Download total', 'Total download')}</span><b class="dn">${fmtB(totD)}</b></div>
@@ -788,6 +797,16 @@ function renderHistory() {
     <div class="kpi"><span>${tr('Țări', 'Countries')}</span><b>${h.countries.filter(c => c.cc && c.cc !== 'LAN').length}</b></div>
     <div class="kpi"><span>${tr('Destinații', 'Destinations')}</span><b>${h.hosts.length}${h.hosts.length >= 60 ? '+' : ''}</b></div>`;
   drawHistChart(h);
+  $('#histSince').textContent = h.since ? tr('Date colectate din ', 'Data collected since ') + new Date(h.since * 1000).toLocaleDateString(LOCALE) : '';
+  // sumar pe luni (doar pentru perioadele lungi)
+  const months = h.months || [];
+  $('#histMonthsCard').classList.toggle('hidden', months.length === 0);
+  if (months.length) {
+    const mName = m => { const [y, mo] = m.split('-').map(Number); const s = new Date(y, mo - 1, 1).toLocaleDateString(LOCALE, { month: 'long', year: 'numeric' }); return s.charAt(0).toUpperCase() + s.slice(1); };
+    const avg = d3.mean(months, m => m.up + m.down) || 0;
+    $('#histMonthsNote').textContent = months.length > 1 ? tr('medie: ', 'average: ') + fmtB(avg) + tr(' / lună', ' / month') : '';
+    $('#histMonths').innerHTML = hbars(months.slice().reverse().map(m => ({ badge: '', label: esc(mName(m.month)) + ` <span class="dim">· ↓ ${fmtB(m.down)} · ↑ ${fmtB(m.up)}</span>`, up: m.up, down: m.down })));
+  }
   $('#histApps').innerHTML = hbars(h.apps.slice(0, 12).map(a => ({ ic: a.icon || icon(a.key), label: esc(a.name), title: a.path, up: a.up, down: a.down })));
   $('#histCountries').innerHTML = hbars(h.countries.slice(0, 12).map(c => ({ badge: ccBadge(c.cc || '?'), label: esc(ccName(c.cc) || tr('Necunoscut', 'Unknown')) + ` <span class="dim">· ${plural(c.apps, WD.app, WD.apps)}</span>`, up: c.up, down: c.down })));
   $('#histHosts').innerHTML = hbars(h.hosts.map(x => ({ badge: ccBadge(x.cc), label: `<span class="mono">${esc(x.host)}</span> <span class="dim">· ${plural(x.apps, WD.app, WD.apps)}</span>`, title: x.host, up: x.up, down: x.down })));
@@ -800,7 +819,12 @@ function renderHistory() {
 function drawHistChart(h) {
   const svg = d3.select('#histChart'); svg.selectAll('*').remove();
   const W = svg.node().clientWidth || 800, H = 240, m = { l: 62, r: 14, t: 10, b: 24 };
-  const step = h.bucket, now = Date.now() / 1000, from = Math.floor((now - h.hours * 3600) / step) * step;
+  const step = h.bucket, now = Date.now() / 1000;
+  const from = h.start != null ? h.start : Math.floor((now - h.hours * 3600) / step) * step;
+  const spanH = (now - from) / 3600;
+  // format axă / tooltip după lungimea perioadei
+  const axisFmt = spanH > 24 * 400 ? '%m.%Y' : spanH > 48 ? '%d.%m' : '%H:%M';
+  const tipFmt = step >= 86400 ? (step > 86400 ? tr('săpt. din %d.%m.%Y', 'week of %d.%m.%Y') : '%d.%m.%Y') : spanH > 48 ? '%d.%m %H:%M' : '%H:%M';
   const map = new Map(h.timeline.map(d => [d.t, d]));
   const data = []; for (let t = from; t <= now; t += step) { const d = map.get(t); data.push({ t: new Date(t * 1000), up: d ? d.up : 0, down: d ? d.down : 0 }); }
   if (data.length < 2) return;
@@ -816,7 +840,7 @@ function drawHistChart(h) {
   svg.append('g').attr('class', 'axis').attr('transform', `translate(${m.l},0)`).call(d3.axisLeft(yD).tickValues(tD).tickFormat(v => fmtB(v)).tickSizeOuter(0));
   svg.append('g').attr('class', 'axis').attr('transform', `translate(${m.l},0)`).call(d3.axisLeft(yU).tickValues(tU).tickFormat(v => fmtB(v)).tickSizeOuter(0));
   svg.append('g').attr('class', 'axis').attr('transform', `translate(0,${H - m.b})`).call(d3.axisBottom(x).ticks(Math.max(3, Math.floor(W / 110))).tickSizeOuter(0)
-    .tickFormat(d => h.hours > 48 ? d3.timeFormat('%d.%m')(d) : d3.timeFormat('%H:%M')(d)));
+    .tickFormat(d => d3.timeFormat(axisFmt)(d)));
   svg.append('line').attr('x1', m.l).attr('x2', W - m.r).attr('y1', y(0)).attr('y2', y(0)).attr('stroke', '#27365c');
   const defs = svg.append('defs');
   defs.html(`<linearGradient id="hgd" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#22d3ee" stop-opacity=".55"/><stop offset="1" stop-color="#22d3ee" stop-opacity=".05"/></linearGradient>
@@ -833,7 +857,7 @@ function drawHistChart(h) {
     .on('mousemove', e => {
       const i = bis(data, x.invert(d3.pointer(e)[0])); const d = data[i]; const px = x(d.t);
       vl.attr('x1', px).attr('x2', px).style('opacity', 1);
-      const t = (h.hours > 48 ? d3.timeFormat('%d.%m %H:%M') : d3.timeFormat('%H:%M'))(d.t);
+      const t = d3.timeFormat(tipFmt)(d.t);
       lbl.text(`${t}   ↓ ${fmtB(d.down)}   ↑ ${fmtB(d.up)}`).attr('x', Math.min(px + 8, W - 240)).style('opacity', 1);
     }).on('mouseleave', () => { vl.style('opacity', 0); lbl.style('opacity', 0); });
 }
@@ -1080,7 +1104,10 @@ function renderSettings() {
         <input type="text" id="hCity" value="${esc(s.homeCity ?? 'București')}" style="width:140px"></div>
     </div>
     <div class="set-group"><h3>${tr('Istoric și date', 'History and data')}</h3>
-      <div class="set"><div class="st"><b>${tr('Păstrează istoricul', 'Keep history for')}</b><span>${tr('Datele mai vechi sunt șterse automat.', 'Older data is deleted automatically.')}</span></div><input type="number" min="1" max="365" id="hDays" value="${s.historyDays ?? 30}" style="width:80px"> <span class="muted">${tr('zile', 'days')}</span></div>
+      <div class="set"><div class="st"><b>${tr('Păstrează istoricul', 'Keep history for')}</b><span>${tr('Ultimele 30 de zile sunt păstrate la minut; datele mai vechi sunt comprimate pe ore, iar după 90 de zile pe zile (totalurile rămân exacte), ca baza să rămână mică.', 'The last 30 days are kept per minute; older data is compacted per hour, and per day after 90 days (totals stay exact), so the database stays small.')}</span></div>
+        <select id="hDays">${[[0, tr('Pentru totdeauna', 'Forever')], [30, tr('30 de zile', '30 days')], [90, tr('90 de zile', '90 days')], [365, tr('1 an', '1 year')], [730, tr('2 ani', '2 years')], [1825, tr('5 ani', '5 years')]]
+          .concat([0, 30, 90, 365, 730, 1825].includes(+s.historyDays || 0) ? [] : [[+s.historyDays, `${s.historyDays} ${tr('zile', 'days')}`]])
+          .map(([v, t]) => `<option value="${v}" ${(+s.historyDays || 0) === v ? 'selected' : ''}>${t}</option>`).join('')}</select></div>
       <div class="set"><div class="st"><b>${tr('Șterge istoricul', 'Clear history')}</b><span>${tr('Elimină traficul și evenimentele salvate.', 'Removes the saved traffic and events.')}</span></div><button class="btn danger sm" id="clearHist">${tr('Șterge', 'Clear')}</button></div>
       <div class="set"><div class="st"><b>${tr('Baza de geolocalizare', 'Geolocation database')}</b><span>${esc(S.status.geo || '')}</span></div><button class="btn sm" id="geoUpd">${tr('Actualizează acum', 'Update now')}</button></div>
     </div>
@@ -1097,7 +1124,14 @@ function renderSettings() {
   Upd.renderSetting();
   $$('#settingsForm input[data-k]').forEach(i => i.onchange = () => { S.settings[i.dataset.k] = i.checked; if (i.dataset.k === 'homeAuto') $('#homeManual').classList.toggle('hidden', i.checked); save(); });
   ['hLat', 'hLon', 'hCity'].forEach(id => $('#' + id).onchange = () => { S.settings.homeLat = +$('#hLat').value; S.settings.homeLon = +$('#hLon').value; S.settings.homeCity = $('#hCity').value; save(); });
-  $('#hDays').onchange = e => { S.settings.historyDays = Math.max(1, Math.min(365, +e.target.value || 30)); save(); };
+  $('#hDays').onchange = e => {
+    const v = +e.target.value || 0, old = +S.settings.historyDays || 0;
+    const apply = () => { S.settings.historyDays = v; save(); };
+    // scurtarea perioadei șterge date: cerem confirmare
+    if (v > 0 && (old === 0 || v < old))
+      confirmBox(tr('Scurtezi istoricul?', 'Shorten the history?'), tr(`Traficul mai vechi de ${v} zile va fi șters definitiv.`, `Traffic older than ${v} days will be deleted permanently.`), tr('Da, scurtează', 'Yes, shorten'), apply, true, () => { e.target.value = String(old); });
+    else apply();
+  };
   $('#clearHist').onclick = () => confirmBox(tr('Ștergi tot istoricul?', 'Clear all history?'), tr('Traficul și evenimentele salvate vor fi eliminate definitiv.', 'The saved traffic and events will be permanently removed.'), tr('Șterge', 'Clear'), () => send({ cmd: 'clearHistory' }), true);
   $('#geoUpd').onclick = () => send({ cmd: 'geoUpdate' });
   $('#fwOn').onclick = () => send({ cmd: 'enableFirewall' });
@@ -1127,7 +1161,7 @@ setInterval(() => { if (S.view === 'history') loadHistory(); }, 60000);
 // ---------------------------------------------------------------- demo (doar în browser, fără aplicație)
 function demoHandle(o) {
   if (o.cmd === 'ready') {
-    onMessage({ type: 'init', version: '1.3', settings: { autoUpdateCheck: true, closeToTray: true, minimizeToTray: true, notifyNewApps: true, showLan: true, homeAuto: true, historyDays: 30 }, rules: [
+    onMessage({ type: 'init', version: '1.4', settings: { autoUpdateCheck: true, closeToTray: true, minimizeToTray: true, notifyNewApps: true, showLan: true, homeAuto: true, historyDays: 0 }, rules: [
       { id: 'a1', kind: 'app', enabled: true, appPath: 'C:\\Program Files\\Telemetry\\tele.exe', appName: 'Telemetry Agent', direction: 'both', target: 'any', fwCount: 2 },
       { id: 'b2', kind: 'custom', enabled: true, appPath: null, appName: null, direction: 'out', protocol: 'any', target: 'domain', value: 'doubleclick.net', resolvedIps: ['1.1.1.1', '2.2.2.2'], fwCount: 1 },
       { id: 'c3', kind: 'custom', enabled: false, appPath: 'C:\\Games\\game.exe', appName: 'Game', direction: 'out', protocol: 'any', target: 'country', value: 'CN', fwCount: 0 }] });
@@ -1152,25 +1186,27 @@ function demoHandle(o) {
     }, 1000);
   }
   if (o.cmd === 'history') {
-    const now = Math.floor(Date.now() / 1000), b = o.hours <= 1 ? 60 : o.hours <= 24 ? 900 : o.hours <= 168 ? 3600 : 21600;
-    const tl = []; for (let t = Math.floor((now - o.hours * 3600) / b) * b; t <= now; t += b) tl.push({ t, down: Math.random() * 5e8 * (1 + Math.sin(t / 8000)), up: Math.random() * 6e7 });
-    onMessage({ type: 'history', hours: o.hours, bucket: b, timeline: tl, apps: S.apps.map(a => ({ key: a.key, name: a.name, path: a.path, up: a.totUp, down: a.totDown })), countries: [{ cc: 'US', up: 3e8, down: 2e9, apps: 5 }, { cc: 'DE', up: 1e8, down: 9e8, apps: 3 }, { cc: 'RO', up: 5e7, down: 3e8, apps: 2 }, { cc: 'NL', up: 2e7, down: 2e8, apps: 2 }],
+    const now = Math.floor(Date.now() / 1000), hrs = o.hours || 24 * 200, b = hrs <= 1 ? 60 : hrs <= 24 ? 900 : hrs <= 168 ? 3600 : hrs <= 745 ? 21600 : 86400;
+    const start = Math.floor((now - hrs * 3600) / b) * b;
+    const months = hrs > 24 * 28 ? Array.from({ length: Math.ceil(hrs / 730) }, (_, i) => { const d = new Date(); d.setMonth(d.getMonth() - i); return { month: d.toISOString().slice(0, 7), up: 2e9 + Math.random() * 3e9, down: 4e10 + Math.random() * 6e10 }; }).reverse() : [];
+    const tl = []; for (let t = start; t <= now; t += b) tl.push({ t, down: Math.random() * 5e8 * (1 + Math.sin(t / 8000)), up: Math.random() * 6e7 });
+    onMessage({ type: 'history', hours: o.hours, bucket: b, start, since: now - hrs * 3600, months, timeline: tl, apps: S.apps.map(a => ({ key: a.key, name: a.name, path: a.path, up: a.totUp, down: a.totDown })), countries: [{ cc: 'US', up: 3e8, down: 2e9, apps: 5 }, { cc: 'DE', up: 1e8, down: 9e8, apps: 3 }, { cc: 'RO', up: 5e7, down: 3e8, apps: 2 }, { cc: 'NL', up: 2e7, down: 2e8, apps: 2 }],
       hosts: [{ host: 'www.google.com', cc: 'US', up: 1e8, down: 9e8, apps: 2 }, { host: 'steamcdn-a.akamaihd.net', cc: 'DE', up: 1e6, down: 7e8, apps: 1 }], ports: [{ port: 443, proto: 'TCP', bytes: 3e9 }, { port: 80, proto: 'TCP', bytes: 2e8 }, { port: 3478, proto: 'UDP', bytes: 9e7 }],
       events: [{ ts: now - 300, kind: 'new_app', app: 'x', appName: 'Discord', detail: tr('Prima conexiune la internet', 'First internet connection') + ' → gateway.discord.gg:443 (United States)' }, { ts: now - 1200, kind: 'block', appName: 'Telemetry Agent', app: 'y', detail: tr('Aplicație blocată', 'App blocked') }] });
   }
   if (o.cmd === 'appList') onMessage({ type: 'appList', apps: S.apps.map(a => ({ key: a.key, name: a.name, path: a.path })) });
   if (o.cmd === 'toggleApp') toast('(demo) ' + (o.block ? tr('blocat', 'blocked') : tr('permis', 'allowed')), 'ok');
   if (o.cmd === 'checkUpdate') {
-    onMessage({ type: 'update', state: 'checking', current: '1.3', open: true });
-    setTimeout(() => onMessage({ type: 'update', state: 'available', tag: 'v1.4', current: '1.3', size: 5300000, page: 'https://github.com/Fallemo/FallenSec/releases', open: true,
+    onMessage({ type: 'update', state: 'checking', current: '1.4', open: true });
+    setTimeout(() => onMessage({ type: 'update', state: 'available', tag: 'v1.5', current: '1.4', size: 5300000, page: 'https://github.com/Fallemo/FallenSec/releases', open: true,
       notes: '**Demo release notes.**\n\n- First change\n- Second change with `code`\n\nRequires the [.NET 8 Desktop Runtime](https://dotnet.microsoft.com).' }), 700);
   }
   if (o.cmd === 'installUpdate') {
     let done = 0; const total = 5300000;
     const t = setInterval(() => {
       done = Math.min(total, done + 700000);
-      onMessage({ type: 'update', state: 'downloading', tag: 'v1.4', current: '1.3', done, total, open: true });
-      if (done >= total) { clearInterval(t); setTimeout(() => onMessage({ type: 'update', state: 'restarting', tag: 'v1.4', current: '1.3', open: true }), 400); }
+      onMessage({ type: 'update', state: 'downloading', tag: 'v1.5', current: '1.4', done, total, open: true });
+      if (done >= total) { clearInterval(t); setTimeout(() => onMessage({ type: 'update', state: 'restarting', tag: 'v1.5', current: '1.4', open: true }), 400); }
     }, 300);
   }
   if (o.cmd === 'saveRule') onMessage({ type: 'toast', kind: 'ok', text: tr('(demo) Regula a fost salvată.', '(demo) Rule saved.') });

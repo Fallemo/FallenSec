@@ -1,4 +1,4 @@
-﻿FallenSec v1.3 - Firewall și monitor de rețea pentru Windows
+﻿FallenSec v1.4 - Firewall și monitor de rețea pentru Windows
 © 2026 Fallen
 =============================================================
 
@@ -28,7 +28,8 @@ CE FACE
 - Reguli: reguli detaliate, per aplicație sau pentru tot PC-ul, pe
   domeniu (cu subdomenii), IP/CIDR, țară, porturi, protocol, direcție.
 - Istoric: grafice de trafic, top aplicații, țări, destinații, porturi,
-  jurnal (aplicații noi, blocări).
+  jurnal (aplicații noi, blocări). Istoricul se păstrează pentru totdeauna
+  (perioade de 1 oră până la „Tot”, plus total pe fiecare lună).
 - Buton de panică: taie tot internetul, rețeaua locală rămâne funcțională.
 - Notificare când o aplicație iese pentru prima dată pe internet.
 
@@ -62,6 +63,14 @@ Hartă: Natural Earth / world-atlas. Grafice: d3.js.
 
 ISTORIC VERSIUNI
 ----------------
+v1.4 (25.11.2026)
+- Istoricul nu se mai șterge după 30 de zile: se păstrează pentru totdeauna
+  (se poate limita din Setări). Ultimele 30 de zile rămân la minut, datele
+  mai vechi sunt comprimate pe ore, iar după 90 de zile pe zile, cu
+  totaluri exacte (baza crește cu ~15-20 MB pe an).
+- Istoric: perioade noi 90 zile, 1 an și Tot, plus cardul „Pe luni”
+  (download/upload pe fiecare lună și media lunară).
+
 v1.3 (13.11.2026)
 - Actualizări automate: FallenSec verifică pe GitHub la pornire și o dată
   pe zi, arată noutățile și se actualizează singur cu un click (Setări >

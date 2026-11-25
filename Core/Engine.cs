@@ -240,7 +240,7 @@ public sealed class Engine : IDisposable
         {
             _lastCleanup = DateTime.UtcNow;
             var days = Settings.HistoryDays;
-            _ = Task.Run(() => { try { Db?.Cleanup(days); } catch { } });
+            _ = Task.Run(() => { try { Db?.Maintain(days); } catch (Exception e) { Log.W("Istoric (întreținere): " + e.Message); } });
         }
     }
 
