@@ -1,4 +1,6 @@
 using System.Net;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.RegularExpressions;
 
 namespace FallenSec.Core;
@@ -7,7 +9,7 @@ public sealed class Rule
 {
     public string Id { get; set; } = Guid.NewGuid().ToString("N")[..10];
     public bool Enabled { get; set; } = true;
-    /// <summary>"app" = blocare totală aplicație (slider), "custom" = regulă detaliată</summary>
+    /// <summary>"app" = blocare totală aplicație (slider), "custom" = regulă detaliată, "folder" = toate .exe din folder (AppPath = folderul)</summary>
     public string Kind { get; set; } = "custom";
     public string? AppPath { get; set; }           // null = toate aplicațiile
     public string? AppName { get; set; }
@@ -21,6 +23,8 @@ public sealed class Rule
     public List<string> ResolvedIps { get; set; } = new(); // pentru domenii
     public string? Error { get; set; }
     public int FwCount { get; set; }
+    /// <summary>Doar pentru "folder": câte programe (.exe) a găsit regula în folder.</summary>
+    public int FolderCount { get; set; }
 }
 
 /// <summary>Păstrează regulile și le sincronizează cu Windows Firewall.</summary>
@@ -54,6 +58,14 @@ public sealed class RuleEngine
         lock (_lock)
             return _rules.Where(r => r.Enabled && r.Kind == "app" && r.AppPath != null)
                          .Select(r => r.AppPath!.ToLowerInvariant()).ToHashSet();
+    }
+
+    /// <summary>Folderele blocate (litere mici, cu  la sfârșit) – o aplicație din ele e blocată.</summary>
+    public List<string> BlockedFolders()
+    {
+        lock (_lock)
+            return _rules.Where(r => r.Enabled && r.Kind == "folder" && r.AppPath != null)
+                         .Select(r => r.AppPath!.TrimEnd((char)92).ToLowerInvariant() + (char)92).ToList();
     }
 
     /// <summary>Aplicații care au cel puțin o regulă custom activă.</summary>
@@ -118,6 +130,16 @@ public sealed class RuleEngine
 
     static void Validate(Rule r)
     {
+        if (r.Kind == "folder")
+        {
+            var err = CheckFolder(r.AppPath, out var full);
+            if (err != null) throw new ArgumentException(err);
+            r.AppPath = full;
+            r.AppName = Path.GetFileName(full);
+            if (string.IsNullOrEmpty(r.AppName)) r.AppName = full;
+            r.Direction = "both"; r.Protocol = "any"; r.Target = "any"; r.Value = null; r.Ports = null;
+            return;
+        }
         r.Value = r.Value?.Trim();
         r.Ports = string.IsNullOrWhiteSpace(r.Ports) ? null : r.Ports.Replace(" ", "");
         if (r.Ports != null && !PortsRx.IsMatch(r.Ports)) throw new ArgumentException("Porturi invalide (ex: 80,443,8000-8100)");
@@ -211,6 +233,84 @@ public sealed class RuleEngine
         static int Cmp(byte[] p, byte[] q) { for (int i = 0; i < p.Length; i++) if (p[i] != q[i]) return p[i].CompareTo(q[i]); return 0; }
     }
 
+    // ---------- foldere ----------
+    /// <summary>Limita de programe dintr-un folder blocat (fiecare primește filtre proprii).</summary>
+    public const int MaxFolderExes = 2000;
+
+    static bool Covers(string outer, string inner) =>
+        inner.Equals(outer, StringComparison.OrdinalIgnoreCase) || inner.StartsWith(outer.TrimEnd((char)92) + (char)92, StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>Validează un folder de blocat. Returnează un mesaj de eroare sau null; <paramref name="full"/> = calea normalizată.</summary>
+    public static string? CheckFolder(string? path, out string full)
+    {
+        full = "";
+        if (string.IsNullOrWhiteSpace(path)) return L.T("Alege un folder.", "Choose a folder.");
+        try { full = Path.GetFullPath(path.Trim().Trim((char)34)); }
+        catch { return L.T("Cale invalidă.", "Invalid path."); }
+        if (full.Length > 3) full = full.TrimEnd((char)92);
+        if (full.StartsWith(@"\\")) return L.T("Folderele din rețea nu sunt suportate – alege un folder de pe un disc local.", "Network folders are not supported – choose a folder on a local drive.");
+        if (!Directory.Exists(full)) return L.T("Folderul nu există.", "The folder does not exist.");
+        var root = Path.GetPathRoot(full) ?? "";
+        if (root.TrimEnd((char)92).Equals(full.TrimEnd((char)92), StringComparison.OrdinalIgnoreCase))
+            return L.T("Nu poți bloca un disc întreg – alege un folder.", "You cannot block a whole drive – choose a folder.");
+        var win = Environment.GetFolderPath(Environment.SpecialFolder.Windows);
+        if (win.Length > 0 && (Covers(win, full) || Covers(full, win)))
+            return L.T("Folderul Windows (sau unul care îl conține) nu poate fi blocat – ai opri serviciile sistemului.", "The Windows folder (or one that contains it) cannot be blocked – it would stop system services.");
+        foreach (var f in new[] { Environment.SpecialFolder.ProgramFiles, Environment.SpecialFolder.ProgramFilesX86, Environment.SpecialFolder.CommonApplicationData, Environment.SpecialFolder.UserProfile })
+        {
+            var p = Environment.GetFolderPath(f);
+            if (p.Length > 0 && Covers(full, p))
+                return L.T("Folderul e prea larg (conține toate programele instalate sau profilul tău). Alege folderul unui singur program.", "That folder is too broad (it contains all installed programs or your profile). Choose a single program's folder.");
+        }
+        return null;
+    }
+
+    /// <summary>Toate programele (.exe) dintr-un folder și din subfoldere (fără FallenSec însuși), sortate.</summary>
+    public static List<string> FolderExes(string folder, out bool truncated)
+    {
+        truncated = false;
+        var res = new List<string>();
+        var self = Environment.ProcessPath ?? "";
+        try
+        {
+            var opt = new EnumerationOptions { RecurseSubdirectories = true, IgnoreInaccessible = true, AttributesToSkip = FileAttributes.ReparsePoint };
+            foreach (var f in Directory.EnumerateFiles(folder, "*.exe", opt))
+            {
+                if (string.Equals(f, self, StringComparison.OrdinalIgnoreCase)) continue;
+                if (res.Count >= MaxFolderExes) { truncated = true; break; }
+                res.Add(f);
+            }
+        }
+        catch (Exception e) { Log.W("FolderExes " + folder + ": " + e.Message); }
+        res.Sort(StringComparer.OrdinalIgnoreCase);
+        return res;
+    }
+
+    static string Sha(string s, int n) => Convert.ToHexString(SHA1.HashData(Encoding.UTF8.GetBytes(s)))[..n];
+    static string FolderSig(List<string> exes) => Sha(string.Join("|", exes.Select(x => x.ToLowerInvariant())), 16);
+
+    readonly Dictionary<string, string> _folderSig = new();
+    System.Threading.Timer? _scan;
+
+    /// <summary>Verifică periodic folderele blocate: dacă a apărut/dispărut un .exe, resincronizează filtrele.</summary>
+    void StartFolderScan() => _scan ??= new System.Threading.Timer(_ => ScanFolders(), null, 30_000, 30_000);
+
+    void ScanFolders()
+    {
+        try
+        {
+            List<Rule> fr;
+            lock (_lock) fr = _rules.Where(r => r.Enabled && r.Kind == "folder" && r.AppPath != null).ToList();
+            foreach (var r in fr)
+            {
+                var sig = FolderSig(FolderExes(r.AppPath!, out _));
+                string? old; lock (_folderSig) _folderSig.TryGetValue(r.Id, out old);
+                if (old != null && old != sig) { Log.W("Folder blocat schimbat, resincronizez: " + r.AppPath); RequestSync(null); return; }
+            }
+        }
+        catch (Exception e) { Log.W("ScanFolders: " + e.Message); }
+    }
+
     // ---------- sincronizare ----------
     public void RequestSync(Rule? applied)
     {
@@ -279,7 +379,7 @@ public sealed class RuleEngine
         Changed?.Invoke();
     }
 
-    IEnumerable<FwSpec> BuildSpecs(Rule r)
+    internal IEnumerable<FwSpec> BuildSpecs(Rule r)
     {
         var dirs = r.Direction switch
         {
@@ -308,13 +408,27 @@ public sealed class RuleEngine
                 break;
             default: addrChunks = new() { null }; break;
         }
-        foreach (var d in dirs)
-            foreach (var p in protos)
-                for (int i = 0; i < addrChunks.Count; i++)
-                {
-                    var name = $"FallenSec [{r.Id}] {(d == FirewallService.DirOut ? "out" : "in")}{(p == 6 ? " tcp" : p == 17 ? " udp" : "")}{(addrChunks.Count > 1 ? " #" + i : "")} - {r.AppName ?? "Toate aplicațiile"}";
-                    yield return new FwSpec(name, r.AppPath, d, p, addrChunks[i], r.Ports);
-                }
+        // regulă pe folder: câte un filtru pentru fiecare .exe (WFP nu are wildcard pe cale)
+        bool folder = r.Kind == "folder";
+        List<string?> apps;
+        if (folder)
+        {
+            var exes = FolderExes(r.AppPath!, out bool trunc);
+            r.FolderCount = exes.Count;
+            if (trunc) r.Error = L.T($"Folderul are peste {MaxFolderExes} programe; doar primele {MaxFolderExes} sunt blocate.", $"The folder has more than {MaxFolderExes} programs; only the first {MaxFolderExes} are blocked.");
+            lock (_folderSig) _folderSig[r.Id] = FolderSig(exes);
+            apps = exes.Cast<string?>().ToList();
+        }
+        else apps = new() { r.AppPath };
+        foreach (var app in apps)
+            foreach (var d in dirs)
+                foreach (var p in protos)
+                    for (int i = 0; i < addrChunks.Count; i++)
+                    {
+                        var tail = folder ? $" - {Path.GetFileName(app)} {Sha(app!.ToLowerInvariant(), 8)}" : $" - {r.AppName ?? "Toate aplicațiile"}";
+                        var name = $"FallenSec [{r.Id}] {(d == FirewallService.DirOut ? "out" : "in")}{(p == 6 ? " tcp" : p == 17 ? " udp" : "")}{(addrChunks.Count > 1 ? " #" + i : "")}{tail}";
+                        yield return new FwSpec(name, app, d, p, addrChunks[i], r.Ports);
+                    }
     }
 
     static List<string?> Chunk(List<string> items, int size)
@@ -327,6 +441,7 @@ public sealed class RuleEngine
     /// <summary>La pornire: aplică regulile salvate (repară eventuale diferențe).</summary>
     public void InitialSync()
     {
+        StartFolderScan();
         foreach (var r in Snapshot().Where(x => x.Target == "domain" && x.Value != null && x.Enabled))
             _ = ResolveDomainAsync(r.Id, r.Value!);
         RequestSync(null);

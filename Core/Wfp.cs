@@ -469,3 +469,80 @@ public sealed class WfpService : IBlockBackend, IDisposable
         return sb.ToString();
     }
 }
+
+/// <summary>Test elevat pentru regulile pe folder (--foldertest): filtre reale WFP, curl.exe copiat într-un folder temporar.</summary>
+public static class FolderTest
+{
+    public static string Run()
+    {
+        var sb = new StringBuilder();
+        void L(string s) => sb.AppendLine(s);
+        var dir = Path.Combine(Path.GetTempPath(), "fs-foldertest-" + Guid.NewGuid().ToString("N")[..8]);
+        var names = new List<string>();
+        using var w = new WfpService();
+        try
+        {
+            w.Open();
+            // --- validare
+            foreach (var p in new[] { @"C:\", Environment.GetFolderPath(Environment.SpecialFolder.Windows), Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "System32"),
+                         Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), @"\\server\share", @"C:\nu\exista\deloc" })
+                L($"CheckFolder({p}) => {RuleEngine.CheckFolder(p, out _) ?? "OK (nepermis!)"}");
+            L($"CheckFolder(temp) => {RuleEngine.CheckFolder(Path.GetTempPath(), out _) ?? "OK"}");
+
+            // --- folder de test
+            var curl = Path.Combine(Environment.SystemDirectory, "curl.exe");
+            Directory.CreateDirectory(Path.Combine(dir, "sub"));
+            File.Copy(curl, Path.Combine(dir, "a.exe")); File.Copy(curl, Path.Combine(dir, "sub", "b.exe"));
+            File.WriteAllText(Path.Combine(dir, "readme.txt"), "x");
+            L("CheckFolder(test) => " + (RuleEngine.CheckFolder(dir, out var full) ?? "OK"));
+            var eng = new RuleEngine(w, null!, false);
+            var rule = new Rule { Id = "ftest", Kind = "folder", AppPath = full, AppName = "test", Direction = "both" };
+            int Curl(string exe, string url = "https://1.1.1.1")
+            {
+                var p = System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(exe, $"-s -o NUL -m 6 {url}") { UseShellExecute = false, CreateNoWindow = true })!;
+                p.WaitForExit(9000); return p.ExitCode;
+            }
+            L($"înainte: a.exe={Curl(Path.Combine(dir, "a.exe"))} b.exe={Curl(Path.Combine(dir, "sub", "b.exe"))} (așteptat 0 0)");
+            var specs = eng.BuildSpecs(rule).ToList();
+            L($"specs: {specs.Count} (așteptat 4: 2 exe x intrare/ieșire), FolderCount={rule.FolderCount}");
+            foreach (var s in specs) { w.Add(s); names.Add(s.Name); }
+            L("nume exemplu: " + specs[0].Name);
+            L($"blocat: a.exe={Curl(Path.Combine(dir, "a.exe"))} b.exe={Curl(Path.Combine(dir, "sub", "b.exe"))} (așteptat ≠0 ≠0)");
+            L($"curl din System32 (neblocat)={Curl(curl)} (așteptat 0)");
+
+            // --- exe nou apărut după aplicarea regulii
+            File.Copy(curl, Path.Combine(dir, "sub", "c.exe"));
+            L($"c.exe nou, înainte de resincronizare={Curl(Path.Combine(dir, "sub", "c.exe"))} (așteptat 0)");
+            var specs2 = eng.BuildSpecs(rule).ToList();
+            var have = w.ListOurRules();
+            var toAdd = specs2.Where(s => !have.ContainsKey(s.Name)).ToList();
+            L($"specs după c.exe: {specs2.Count}, de adăugat: {toAdd.Count} (așteptat 6 / 2)");
+            foreach (var s in toAdd) { w.Add(s); names.Add(s.Name); }
+            L($"c.exe după resincronizare={Curl(Path.Combine(dir, "sub", "c.exe"))} (așteptat ≠0)");
+
+            // --- exe șters
+            File.Delete(Path.Combine(dir, "a.exe"));
+            var specs3 = eng.BuildSpecs(rule).ToList();
+            L($"specs după ștergerea a.exe: {specs3.Count} (așteptat 4)");
+
+            // --- performanță: folder mare
+            var big = Path.Combine(dir, "big"); Directory.CreateDirectory(big);
+            var tiny = Path.Combine(Environment.SystemDirectory, "whoami.exe");
+            for (int i = 0; i < 300; i++) File.Copy(tiny, Path.Combine(big, $"p{i:000}.exe"));
+            var bigRule = new Rule { Id = "ftest2", Kind = "folder", AppPath = big, AppName = "big", Direction = "both" };
+            var sw = System.Diagnostics.Stopwatch.StartNew();
+            var bs = eng.BuildSpecs(bigRule).ToList(); L($"folder cu 300 exe: {bs.Count} specs, enumerare {sw.ElapsedMilliseconds} ms");
+            sw.Restart(); foreach (var s in bs) { w.Add(s); names.Add(s.Name); } L($"adăugare {bs.Count} specs: {sw.ElapsedMilliseconds} ms");
+            sw.Restart(); var lst = w.ListOurRules(); L($"listare ({lst.Count} nume): {sw.ElapsedMilliseconds} ms");
+        }
+        catch (Exception e) { L("EROARE: " + e); }
+        finally
+        {
+            var sw = System.Diagnostics.Stopwatch.StartNew();
+            foreach (var n in names.Distinct()) { try { w.Remove(n); } catch (Exception e) { L("remove " + n + ": " + e.Message); } }
+            L($"curățare: {names.Distinct().Count()} nume în {sw.ElapsedMilliseconds} ms; rămase ale testului: {w.ListOurRules().Keys.Count(k => k.StartsWith("FallenSec [ftest"))}");
+            try { Directory.Delete(dir, true); } catch (Exception e) { L("ștergere folder: " + e.Message); }
+        }
+        return sb.ToString();
+    }
+}

@@ -27,6 +27,14 @@ public partial class App : System.Windows.Application
             Shutdown();
             return;
         }
+        if (e.Args.Contains("--foldertest"))
+        {
+            string res;
+            try { res = FolderTest.Run(); } catch (Exception ex) { res = "EROARE: " + ex; }
+            try { File.WriteAllText(Path.Combine(Path.GetTempPath(), "fallensec-foldertest.txt"), res); } catch { }
+            Shutdown();
+            return;
+        }
         if (e.Args.Contains("--wfptest"))
         {
             var res = WfpService.SelfTest();

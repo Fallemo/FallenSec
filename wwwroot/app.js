@@ -22,6 +22,13 @@ if (EN) {
 }
 
 const CHANGELOG = [
+  { v: '1.5', d: '26.11.2026', items: [
+    ['Blocare pe folder: alegi un folder (de ex. un program dezarhivat) și toate programele .exe din el și din subfoldere pierd internetul, intrare și ieșire (Reguli → „Blochează un folder”)', 'Folder blocking: pick a folder (e.g. an unzipped program) and every .exe in it and its subfolders loses internet access, inbound and outbound (Rules → “Block a folder”)'],
+    ['Un program nou apărut în folder este blocat automat, în cel mult 30 de secunde', 'A program that appears in the folder later is blocked automatically within 30 seconds'],
+    ['Din Aplicații → rând extins → „Blochează tot folderul” blochezi dintr-un click folderul unei aplicații, când nu știi exact ce anume să blochezi', 'From Apps → expanded row → “Block the whole folder” you block an app’s whole folder in one click, when you are not sure what exactly to block'],
+    ['Aplicațiile blocate printr-un folder apar marcate „BLOCAT (folder)”; se deblochează ștergând regula', 'Apps blocked through a folder are marked “BLOCKED (folder)”; delete the rule to unblock them'],
+    ['Protecții: nu poți bloca un disc întreg, folderul Windows, Program Files, ProgramData sau profilul tău; FallenSec nu se blochează niciodată pe el însuși', 'Safeguards: you cannot block a whole drive, the Windows folder, Program Files, ProgramData or your profile; FallenSec never blocks itself'],
+  ]},
   { v: '1.4', d: '25.11.2026', items: [
     ['Istoricul nu se mai șterge după 30 de zile: se păstrează pentru totdeauna (se poate limita din Setări → Istoric și date)', 'History is no longer deleted after 30 days: it is kept forever (you can limit it in Settings → History and data)'],
     ['Ultimele 30 de zile rămân la nivel de minut; datele mai vechi sunt comprimate automat pe ore, iar după 90 de zile pe zile, cu totaluri exacte, ca baza de date să rămână mică (cam 15–20 MB pe an)', 'The last 30 days stay per minute; older data is compacted automatically per hour, and per day after 90 days, with exact totals, so the database stays small (roughly 15–20 MB per year)'],
@@ -90,7 +97,7 @@ const SVG = {
 
 const S = {
   apps: [], appMap: new Map(), conns: [], frozen: null, status: {}, home: null, hist: [], up: 0, down: 0,
-  rules: [], settings: {}, version: '1.4', view: 'map', icons: new Map(), expanded: new Set(),
+  rules: [], settings: {}, version: '1.5', view: 'map', icons: new Map(), expanded: new Set(),
   mapSel: null, mapApp: null, appFilter: 'all', appSort: { k: 'rate', d: -1 }, connProto: 'all', connNet: 'all', connSort: { k: 'down', d: -1 },
   histHours: 24, histApp: '', history: null, appList: [],
   update: null, updDismissed: null,
@@ -113,6 +120,8 @@ function onMessage(m) {
       S.history = m; renderHistory(); break;
     case 'appList': S.appList = m.apps; fillHistApps(); Modal.onAppList?.(); break;
     case 'browsedApp': Modal.onBrowsed?.(m); break;
+    case 'browsedFolder': Modal.onBrowsedFolder?.(m); break;
+    case 'folderInfo': Modal.onFolderInfo?.(m); break;
     case 'update': Upd.onMessage(m); break;
   }
 }
@@ -286,7 +295,7 @@ function renderApps() {
   const rows = list.map(a => {
     const exp = S.expanded.has(a.key);
     const cs = a.countries.filter(c => c !== 'LAN');
-    const tags = (a.blocked ? `<span class="tag red">${tr('BLOCAT', 'BLOCKED')}</span>` : '') + (a.rules ? `<span class="tag amber">${tr('reguli', 'rules')}</span>` : '') +
+    const tags = (a.blocked ? `<span class="tag red">${a.viaFolder ? tr('BLOCAT (folder)', 'BLOCKED (folder)') : tr('BLOCAT', 'BLOCKED')}</span>` : '') + (a.rules ? `<span class="tag amber">${tr('reguli', 'rules')}</span>` : '') +
       (a.sys ? `<span class="tag">${tr('sistem', 'system')}</span>` : '') + (a.listen.length ? `<span class="tag cyan" title="${esc(a.listen.join(', '))}">${tr('ascultă', 'listening')} ${a.listen.length}</span>` : '');
     let html = `<tr class="${a.blocked ? 'blocked' : ''} ${a.conns === 0 && !a.blocked ? 'inactive' : ''}" data-key="${esc(a.key)}">
       <td style="width:34px"><button class="icon-btn" data-act="expand">${exp ? SVG.chevD : SVG.chev}</button></td>
@@ -303,7 +312,10 @@ function renderApps() {
   $('#appsTable tbody').innerHTML = rows.join('') || `<tr><td colspan="8" class="empty">${S.apps.length ? tr('Nicio aplicație nu corespunde filtrului.', 'No app matches the filter.') : tr('Se încarcă...', 'Loading...')}</td></tr>`;
 }
 function switchHtml(a) {
-  return `<label class="sw ${a.canBlock ? '' : 'disabled'}" title="${a.blocked ? tr('Internet BLOCAT — apasă pentru a permite', 'Internet BLOCKED — click to allow') : tr('Internet permis — apasă pentru a bloca', 'Internet allowed — click to block')}"><input type="checkbox" data-act="toggle" ${a.blocked ? '' : 'checked'}><span></span></label>`;
+  // viaFolder: blocată de o regulă pe folder – se deblochează ștergând regula (Reguli), nu din slider
+  const title = a.viaFolder ? tr('Blocată printr-o regulă pe folder — șterge regula din Reguli ca să permiți', 'Blocked by a folder rule — delete the rule under Rules to allow')
+    : a.blocked ? tr('Internet BLOCAT — apasă pentru a permite', 'Internet BLOCKED — click to allow') : tr('Internet permis — apasă pentru a bloca', 'Internet allowed — click to block');
+  return `<label class="sw ${a.canBlock && !a.viaFolder ? '' : 'disabled'}" title="${title}"><input type="checkbox" data-act="toggle" ${a.blocked ? '' : 'checked'} ${a.viaFolder ? 'disabled' : ''}><span></span></label>`;
 }
 function appDetail(a) {
   const conns = S.conns.filter(c => c.app === a.key);
@@ -314,6 +326,7 @@ function appDetail(a) {
     <div class="exp-actions">
       <button class="btn sm" data-act="reveal">${tr('Deschide locația', 'Open file location')}</button>
       <button class="btn sm" data-act="ruleFor">${tr('Regulă detaliată pentru aplicație', 'Detailed rule for this app')}</button>
+      ${a.canBlock && !a.sys ? `<button class="btn sm" data-act="blockFolder" title="${esc(tr('Blochează toate programele din folderul acestei aplicații', "Block every program in this app's folder"))}">${tr('Blochează tot folderul', 'Block the whole folder')}</button>` : ''}
       <button class="btn sm" data-act="histFor">${tr('Istoric aplicație', 'App history')}</button>
       ${a.listen.length ? `<span class="muted" style="align-self:center">${tr('Porturi ascultate', 'Listening ports')}: <span class="mono">${esc(a.listen.join(', '))}</span></span>` : ''}
     </div>
@@ -342,6 +355,7 @@ function tableClick(e) {
     case 'toggle': toggleApp(key, t.checked); break;
     case 'reveal': if (a) send({ cmd: 'reveal', path: a.path }); break;
     case 'ruleFor': if (a) Modal.rule({ appPath: a.path, appName: a.name }); break;
+    case 'blockFolder': if (a) Modal.folder({ appPath: a.path.replace(/\\[^\\]*$/, '') }); break;
     case 'histFor': S.histApp = key; go('history'); break;
     case 'blockDest': blockDestMenu(t.dataset.id); break;
     case 'kill': send({ cmd: 'killConn', id: t.dataset.id }); break;
@@ -865,6 +879,7 @@ window.addEventListener('resize', () => { if (S.view === 'history' && S.history)
 
 // ---------------------------------------------------------------- rules
 $('#newRule').onclick = () => Modal.rule({});
+$('#newFolder').onclick = () => Modal.folder({});
 $('#ruleSearch').oninput = renderRules;
 const DIR = EN ? { out: 'outbound', in: 'inbound', both: 'outbound + inbound' } : { out: 'ieșire', in: 'intrare', both: 'ieșire + intrare' };
 function ruleText(r) {
@@ -882,15 +897,17 @@ function renderRules() {
   $('#rulesList').innerHTML = list.map(r => {
     const t = ruleText(r);
     const appIco = r.appPath ? icon(r.appPath.toLowerCase()) : null;
-    const title = r.kind === 'app'
+    const title = r.kind === 'folder'
+      ? `<span class="pill red">${tr('Folder blocat', 'Folder blocked')}</span> ${esc(r.appName || r.appPath)}`
+      : r.kind === 'app'
       ? `<span class="pill red">${tr('Internet tăiat complet', 'Internet fully cut off')}</span> ${esc(r.appName || r.appPath)}`
       : `<span class="pill red">${tr('Blochează', 'Block')}</span> ${esc(r.appName || tr('Toate aplicațiile', 'All apps'))} <span class="muted">→</span> ${esc(t.tgt)}`;
-    const sub = r.kind === 'app' ? `${esc(r.appPath)}` : `${esc(t.extra)}${r.appPath ? ' · ' + esc(r.appPath) : ''}${r.target === 'domain' ? ` · ${r.resolvedIps?.length || 0} ${tr('IP-uri cunoscute', 'known IPs')}` : ''}`;
+    const sub = r.kind === 'folder' ? `${esc(r.appPath)} · ${r.folderCount || 0} ${tr('programe', 'programs')}` : r.kind === 'app' ? `${esc(r.appPath)}` : `${esc(t.extra)}${r.appPath ? ' · ' + esc(r.appPath) : ''}${r.target === 'domain' ? ` · ${r.resolvedIps?.length || 0} ${tr('IP-uri cunoscute', 'known IPs')}` : ''}`;
     return `<div class="rule ${r.enabled ? '' : 'off'}" data-id="${r.id}">
-      ${appIco ? `<img class="app-ico" src="${appIco}">` : `<span class="app-ico" style="display:grid;place-items:center;color:var(--muted)">${SVG.ban.replace('<svg', '<svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"')}</span>`}
+      ${r.kind === 'folder' ? `<span class="app-ico" style="display:grid;place-items:center;color:#fbbf24">${SVG.folder.replace('<svg', '<svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"')}</span>` : appIco ? `<img class="app-ico" src="${appIco}">` : `<span class="app-ico" style="display:grid;place-items:center;color:var(--muted)">${SVG.ban.replace('<svg', '<svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"')}</span>`}
       <div class="rtxt"><div class="rtitle">${title}</div><div class="rsub" title="${esc(sub)}">${sub}${r.note ? ' · ' + esc(r.note) : ''} · ${r.fwCount || 0} ${tr('reguli firewall', 'firewall filters')}</div>${r.error ? `<div class="err">⚠ ${esc(r.error)}</div>` : ''}</div>
       <label class="sw neutral" title="${tr('Activă / inactivă', 'Enabled / disabled')}"><input type="checkbox" data-act="en" ${r.enabled ? 'checked' : ''}><span></span></label>
-      ${r.kind === 'custom' ? `<button class="icon-btn" data-act="edit" title="${tr('Editează', 'Edit')}">${SVG.edit}</button>` : ''}
+      ${r.kind !== 'app' ? `<button class="icon-btn" data-act="edit" title="${tr('Editează', 'Edit')}">${SVG.edit}</button>` : ''}
       <button class="icon-btn" data-act="del" title="${tr('Șterge', 'Delete')}">${SVG.trash}</button></div>`;
   }).join('') || `<div class="empty">${tr('Nicio regulă încă.<br><br>Folosește sliderul din Aplicații ca să tai internetul unei aplicații, sau creează o regulă detaliată (pe domeniu, IP, țară, port).', 'No rules yet.<br><br>Use the switch on the Apps page to cut an app off the internet, or create a detailed rule (by domain, IP, country, port).')}</div>`;
 }
@@ -898,8 +915,8 @@ $('#rulesList').addEventListener('click', e => {
   const t = e.target.closest('[data-act]'); if (!t) return;
   const id = t.closest('.rule').dataset.id; const r = S.rules.find(x => x.id === id);
   if (t.dataset.act === 'en') send({ cmd: 'toggleRule', id, enabled: t.checked });
-  if (t.dataset.act === 'edit') Modal.rule(r);
-  if (t.dataset.act === 'del') confirmBox(tr('Ștergi regula?', 'Delete this rule?'), r.kind === 'app' ? tr(`Aplicația „${r.appName}” va avea din nou acces la internet.`, `"${r.appName}" will have internet access again.`) : tr('Regula va fi eliminată, iar blocarea ei încetează imediat.', 'The rule is removed and its blocking stops immediately.'), tr('Șterge', 'Delete'), () => send({ cmd: 'deleteRule', id }), true);
+  if (t.dataset.act === 'edit') (r.kind === 'folder' ? Modal.folder(r) : Modal.rule(r));
+  if (t.dataset.act === 'del') confirmBox(tr('Ștergi regula?', 'Delete this rule?'), r.kind === 'folder' ? tr('Programele din folder vor avea din nou acces la internet.', 'Programs in the folder will have internet access again.') : r.kind === 'app' ? tr(`Aplicația „${r.appName}” va avea din nou acces la internet.`, `"${r.appName}" will have internet access again.`) : tr('Regula va fi eliminată, iar blocarea ei încetează imediat.', 'The rule is removed and its blocking stops immediately.'), tr('Șterge', 'Delete'), () => send({ cmd: 'deleteRule', id }), true);
 });
 
 // ---------------------------------------------------------------- modal
@@ -907,7 +924,51 @@ const Modal = {
   open(html) { this.kind = null; $('#modalBox').innerHTML = html; $('#modal').classList.remove('hidden'); $('#modalBox').querySelectorAll('[data-close]').forEach(b => b.onclick = () => this.close()); },
   close() {
     if (this.kind === 'update' && ['downloading', 'restarting'].includes(S.update?.state)) return; // nu închidem în timpul instalării
-    $('#modal').classList.add('hidden'); this.onAppList = this.onBrowsed = null; this.pendingSave = false; this.kind = null;
+    $('#modal').classList.add('hidden'); this.onAppList = this.onBrowsed = this.onBrowsedFolder = this.onFolderInfo = null; this.pendingSave = false; this.kind = null;
+  },
+  /** Blochează toate programele (.exe) dintr-un folder și din subfolderuri. */
+  folder(init) {
+    const r = Object.assign({ kind: 'folder', enabled: true, appPath: '', note: '' }, init || {});
+    const isEdit = !!r.id;
+    this.open(`<h2>${isEdit ? tr('Editează folderul blocat', 'Edit blocked folder') : tr('Blochează un folder', 'Block a folder')}</h2>
+      <div class="form-row"><label>${tr('Folder', 'Folder')}</label>
+        <div class="form-inline"><input type="text" id="fdPath" spellcheck="false" placeholder="${tr('ex: C:\\Descărcări\\program', 'e.g. C:\\Downloads\\program')}"><button class="btn" id="fdBrowse" style="flex:none">${tr('Alege...', 'Browse...')}</button></div>
+        <span class="hint">${tr('Toate programele (.exe) din folder și din subfoldere pierd accesul la internet (intrare și ieșire). Un program nou apărut în folder este blocat automat, în cel mult 30 de secunde.', 'Every program (.exe) in the folder and its subfolders loses internet access (inbound and outbound). A program that appears in the folder later is blocked automatically within 30 seconds.')}</span></div>
+      <div class="preview" id="fdInfo"></div>
+      <div class="form-row"><label>${tr('Notă (opțional)', 'Note (optional)')}</label><input type="text" id="fdNote" placeholder="${tr('ex: program dezarhivat, nu știu ce face', 'e.g. unzipped tool, not sure what it does')}"></div>
+      <div class="dim" style="font-size:11.5px;margin:-4px 0 12px">${tr('Nu poate opri fișierele care nu sunt .exe (de ex. un script sau o bibliotecă rulată de alt program, precum python.exe sau rundll32.exe) – acelea se blochează prin programul care le rulează.', 'It cannot stop files that are not .exe (e.g. a script or library run by another program such as python.exe or rundll32.exe) – block the program that runs them instead.')}</div>
+      <div class="modal-actions"><button class="btn ghost" data-close>${tr('Renunță', 'Cancel')}</button><button class="btn primary" id="fdSave" disabled>${isEdit ? tr('Salvează', 'Save') : tr('Blochează folderul', 'Block the folder')}</button></div>`);
+    let ok = false, timer = 0;
+    const info = h => { $('#fdInfo').innerHTML = h; };
+    const check = () => {
+      const p = $('#fdPath').value.trim(); ok = false; $('#fdSave').disabled = true;
+      clearTimeout(timer);
+      if (!p) { info(`<span class="muted">${tr('Alege un folder ca să vezi ce programe conține.', 'Choose a folder to see which programs it contains.')}</span>`); return; }
+      info(`<span class="muted">${tr('Se caută programele...', 'Looking for programs...')}</span>`);
+      timer = setTimeout(() => send({ cmd: 'folderInfo', path: p }), 300);
+    };
+    this.onFolderInfo = m => {
+      if (m.req !== $('#fdPath').value.trim()) return; // răspuns întârziat pentru o cale veche
+      if (m.error) { info(`<span style="color:#fca5a5">⚠ ${esc(m.error)}</span>`); return; }
+      ok = true; $('#fdSave').disabled = false;
+      const list = (m.sample || []).map(x => `<div class="mono dim" style="font-size:11.5px">${esc(x)}</div>`).join('');
+      info(m.count
+        ? `<b>${m.count}${m.truncated ? '+' : ''}</b> ${tr(m.count === 1 ? 'program găsit' : 'programe găsite', m.count === 1 ? 'program found' : 'programs found')} — ${tr('toate vor fi blocate:', 'all will be blocked:')}${list}${m.count > (m.sample || []).length ? `<div class="dim" style="font-size:11.5px">… ${tr('și altele', 'and more')}</div>` : ''}`
+        : tr('Niciun program încă – folderul rămâne supravegheat și orice .exe apărut în el va fi blocat.', 'No programs yet – the folder stays watched and any .exe that appears in it will be blocked.'));
+    };
+    this.onBrowsedFolder = m => { $('#fdPath').value = m.path; check(); };
+    $('#fdPath').value = r.appPath || ''; $('#fdNote').value = r.note || '';
+    $('#fdPath').oninput = check;
+    $('#fdBrowse').onclick = () => send({ cmd: 'browseFolder', path: $('#fdPath').value.trim() });
+    $('#fdSave').onclick = () => {
+      if (!ok) return;
+      const out = { id: r.id, kind: 'folder', enabled: r.enabled !== false, appPath: $('#fdPath').value.trim(), direction: 'both', protocol: 'any', target: 'any', note: $('#fdNote').value.trim() || null, created: r.created };
+      if (!out.id) delete out.id; if (!out.created) delete out.created;
+      this.pendingSave = true;
+      send({ cmd: 'saveRule', rule: out });
+    };
+    check();
+    if (!r.appPath) setTimeout(() => $('#fdPath').focus(), 30);
   },
   rule(init) {
     const r = Object.assign({ kind: 'custom', enabled: true, direction: 'out', protocol: 'any', target: 'any', value: '', ports: '', note: '', appPath: null, appName: null }, init || {});
@@ -1161,10 +1222,11 @@ setInterval(() => { if (S.view === 'history') loadHistory(); }, 60000);
 // ---------------------------------------------------------------- demo (doar în browser, fără aplicație)
 function demoHandle(o) {
   if (o.cmd === 'ready') {
-    onMessage({ type: 'init', version: '1.4', settings: { autoUpdateCheck: true, closeToTray: true, minimizeToTray: true, notifyNewApps: true, showLan: true, homeAuto: true, historyDays: 0 }, rules: [
+    onMessage({ type: 'init', version: '1.5', settings: { autoUpdateCheck: true, closeToTray: true, minimizeToTray: true, notifyNewApps: true, showLan: true, homeAuto: true, historyDays: 0 }, rules: [
       { id: 'a1', kind: 'app', enabled: true, appPath: 'C:\\Program Files\\Telemetry\\tele.exe', appName: 'Telemetry Agent', direction: 'both', target: 'any', fwCount: 2 },
       { id: 'b2', kind: 'custom', enabled: true, appPath: null, appName: null, direction: 'out', protocol: 'any', target: 'domain', value: 'doubleclick.net', resolvedIps: ['1.1.1.1', '2.2.2.2'], fwCount: 1 },
-      { id: 'c3', kind: 'custom', enabled: false, appPath: 'C:\\Games\\game.exe', appName: 'Game', direction: 'out', protocol: 'any', target: 'country', value: 'CN', fwCount: 0 }] });
+      { id: 'c3', kind: 'custom', enabled: false, appPath: 'C:\\Games\\game.exe', appName: 'Game', direction: 'out', protocol: 'any', target: 'country', value: 'CN', fwCount: 0 },
+      { id: 'd4', kind: 'folder', enabled: true, appPath: 'C:\\Users\\me\\Downloads\\SomeTool', appName: 'SomeTool', direction: 'both', protocol: 'any', target: 'any', folderCount: 7, fwCount: 28, note: 'unzipped tool' }] });
     const cities = [['US', 'Ashburn', 39.04, -77.49], ['DE', 'Frankfurt', 50.11, 8.68], ['NL', 'Amsterdam', 52.37, 4.9], ['IE', 'Dublin', 53.35, -6.26], ['US', 'San Jose', 37.34, -121.89], ['SG', 'Singapore', 1.35, 103.82], ['JP', 'Tokyo', 35.68, 139.69], ['GB', 'London', 51.51, -0.13], ['FR', 'Paris', 48.86, 2.35], ['RO', 'București', 44.43, 26.1], ['SE', 'Stockholm', 59.33, 18.07], ['BR', 'São Paulo', -23.55, -46.63], ['AU', 'Sydney', -33.87, 151.21], ['IN', 'Mumbai', 19.08, 72.88], ['CA', 'Toronto', 43.65, -79.38]];
     const apps = [['chrome', 'Google Chrome', 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe', 'Google LLC'], ['discord', 'Discord', 'C:\\Users\\me\\AppData\\Local\\Discord\\app\\Discord.exe', 'Discord Inc.'], ['steam', 'Steam', 'C:\\Program Files (x86)\\Steam\\steam.exe', 'Valve'], ['svchost', tr('Servicii Windows (svchost)', 'Windows services (svchost)'), 'C:\\Windows\\System32\\svchost.exe', 'Microsoft', true], ['spotify', 'Spotify', 'C:\\Users\\me\\AppData\\Roaming\\Spotify\\Spotify.exe', 'Spotify AB'], ['tele', 'Telemetry Agent', 'C:\\Program Files\\Telemetry\\tele.exe', null], ['code', 'Visual Studio Code', 'C:\\Users\\me\\AppData\\Local\\Programs\\Microsoft VS Code\\Code.exe', 'Microsoft']];
     const hosts = ['www.google.com', 'gateway.discord.gg', 'steamcdn-a.akamaihd.net', 'settings-win.data.microsoft.com', 'audio-ak.spotifycdn.com', 'api.github.com', 'cdn.jsdelivr.net', 'graph.facebook.com', null];
@@ -1197,17 +1259,21 @@ function demoHandle(o) {
   if (o.cmd === 'appList') onMessage({ type: 'appList', apps: S.apps.map(a => ({ key: a.key, name: a.name, path: a.path })) });
   if (o.cmd === 'toggleApp') toast('(demo) ' + (o.block ? tr('blocat', 'blocked') : tr('permis', 'allowed')), 'ok');
   if (o.cmd === 'checkUpdate') {
-    onMessage({ type: 'update', state: 'checking', current: '1.4', open: true });
-    setTimeout(() => onMessage({ type: 'update', state: 'available', tag: 'v1.5', current: '1.4', size: 5300000, page: 'https://github.com/Fallemo/FallenSec/releases', open: true,
+    onMessage({ type: 'update', state: 'checking', current: '1.5', open: true });
+    setTimeout(() => onMessage({ type: 'update', state: 'available', tag: 'v1.6', current: '1.5', size: 5300000, page: 'https://github.com/Fallemo/FallenSec/releases', open: true,
       notes: '**Demo release notes.**\n\n- First change\n- Second change with `code`\n\nRequires the [.NET 8 Desktop Runtime](https://dotnet.microsoft.com).' }), 700);
   }
   if (o.cmd === 'installUpdate') {
     let done = 0; const total = 5300000;
     const t = setInterval(() => {
       done = Math.min(total, done + 700000);
-      onMessage({ type: 'update', state: 'downloading', tag: 'v1.5', current: '1.4', done, total, open: true });
-      if (done >= total) { clearInterval(t); setTimeout(() => onMessage({ type: 'update', state: 'restarting', tag: 'v1.5', current: '1.4', open: true }), 400); }
+      onMessage({ type: 'update', state: 'downloading', tag: 'v1.6', current: '1.5', done, total, open: true });
+      if (done >= total) { clearInterval(t); setTimeout(() => onMessage({ type: 'update', state: 'restarting', tag: 'v1.6', current: '1.5', open: true }), 400); }
     }, 300);
   }
   if (o.cmd === 'saveRule') onMessage({ type: 'toast', kind: 'ok', text: tr('(demo) Regula a fost salvată.', '(demo) Rule saved.') });
+  if (o.cmd === 'browseFolder') onMessage({ type: 'browsedFolder', path: 'C:\\Users\\me\\Downloads\\SomeTool' });
+  if (o.cmd === 'folderInfo') setTimeout(() => onMessage(/windows/i.test(o.path)
+    ? { type: 'folderInfo', req: o.path, path: o.path, error: tr('Folderul Windows (sau unul care îl conține) nu poate fi blocat – ai opri serviciile sistemului.', 'The Windows folder (or one that contains it) cannot be blocked – it would stop system services.') }
+    : { type: 'folderInfo', req: o.path, path: o.path, count: 7, truncated: false, sample: ['SomeTool.exe', 'updater.exe', 'bin\\helper.exe', 'bin\\agent.exe', 'plugins\\sync.exe', 'plugins\\crash.exe'] }), 200);
 }

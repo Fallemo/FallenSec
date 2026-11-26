@@ -1,4 +1,4 @@
-FallenSec v1.4 - Firewall and network monitor for Windows
+FallenSec v1.5 - Firewall and network monitor for Windows
 (c) 2026 Fallen - https://github.com/Fallemo/FallenSec
 =========================================================
 
@@ -27,6 +27,10 @@ WHAT IT DOES
 - Connections: process, port, domain, IP, city, country, state, speed.
 - Rules: detailed rules per app or for the whole PC, by domain
   (with subdomains), IP/CIDR, country, ports, protocol, direction.
+- Folder blocking: every program (.exe) in a folder and its subfolders
+  loses internet access (Rules > "Block a folder", or "Block the whole
+  folder" from the Apps page). Programs that appear later are blocked
+  automatically.
 - History: traffic charts, top apps, countries, destinations, ports,
   event log. History is kept forever (ranges from 1 hour to "All",
   plus a total for every month).

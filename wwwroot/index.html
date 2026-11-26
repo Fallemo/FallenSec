@@ -11,7 +11,7 @@
   <aside id="sidebar">
     <div class="brand">
       <img src="logo.png" alt="">
-      <div><div class="brand-name">FallenSec</div><div class="brand-ver" id="ver">v1.4</div></div>
+      <div><div class="brand-name">FallenSec</div><div class="brand-ver" id="ver">v1.5</div></div>
     </div>
     <nav id="nav">
       <a data-view="map" class="active"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.8 3 2.8 15 0 18M12 3c-2.8 3-2.8 15 0 18"/></svg><span data-en="Map">Hartă</span></a>
@@ -125,6 +125,7 @@
     <section id="view-rules" class="view">
       <div class="toolbar">
         <button class="btn primary" id="newRule" data-en="+ New rule">+ Regulă nouă</button>
+        <button class="btn" id="newFolder" data-en="+ Block a folder" title="Blochează toate programele dintr-un folder" data-en-title="Block every program in a folder">+ Blochează un folder</button>
         <input id="ruleSearch" class="search" placeholder="Caută în reguli..." data-en-ph="Search rules...">
         <span class="muted" data-en="Rules are enforced through the Windows Filtering Platform (persistent FallenSec filters) and stay active even if you close the app or restart the PC.">Regulile sunt aplicate prin Windows Filtering Platform (filtre persistente FallenSec) și rămân active chiar dacă închizi aplicația sau repornești PC-ul.</span>
       </div>

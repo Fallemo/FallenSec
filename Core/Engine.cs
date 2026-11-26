@@ -321,13 +321,15 @@ public sealed class Engine : IDisposable
     string BuildSnapshot(HashSet<string> blocked)
     {
         var custom = Rules.AppsWithCustomRules();
+        var folders = Rules.BlockedFolders();
+        bool InFolder(string k) { foreach (var f in folders) if (k.StartsWith(f, StringComparison.Ordinal)) return true; return false; }
         var apps = _apps.Values.Select(s => new
         {
             key = s.App.Key, name = s.App.Name, path = s.App.Path, publisher = s.App.Publisher, sys = s.App.IsSystem,
             icon = SentIcons.Add(s.App.Key) ? s.App.Icon : null,
             conns = s.Conns, up = s.RateUp, down = s.RateDown, totUp = s.TotUp, totDown = s.TotDown,
             listen = s.Listening.OrderBy(x => x).Take(20).ToArray(), countries = s.Countries.ToArray(),
-            blocked = blocked.Contains(s.App.Key), rules = custom.Contains(s.App.Key),
+            blocked = blocked.Contains(s.App.Key) || InFolder(s.App.Key), viaFolder = !blocked.Contains(s.App.Key) && InFolder(s.App.Key), rules = custom.Contains(s.App.Key),
             canBlock = s.App.Key != "idle" && s.App.Key != "unknown" && !s.App.Key.StartsWith("name:"),
             active = (DateTime.UtcNow - s.LastActive).TotalSeconds < 5
         }).ToList();
@@ -344,7 +346,7 @@ public sealed class Engine : IDisposable
                 lon = double.IsNaN(c.Geo.Lon) ? (double?)null : Math.Round(c.Geo.Lon, 3),
                 state = c.Udp ? "UDP" : Native.TcpStateName(c.State), up = c.RateUp, down = c.RateDown,
                 totUp = c.TotUp, totDown = c.TotDown, age = (long)(DateTime.UtcNow - c.First).TotalSeconds,
-                blocked = blocked.Contains(c.App.Key)
+                blocked = blocked.Contains(c.App.Key) || InFolder(c.App.Key)
             }).ToList();
 
         var payload = new
@@ -372,7 +374,11 @@ public sealed class Engine : IDisposable
             foreach (var c in _conns.Values)
             {
                 if (c.Row == null || c.Udp) continue;
-                if (r.AppPath != null && !string.Equals(c.App.Key, r.AppPath, StringComparison.OrdinalIgnoreCase)) continue;
+                if (r.AppPath != null)
+                {
+                    if (r.Kind == "folder") { if (!c.App.Key.StartsWith(r.AppPath.TrimEnd((char)92).ToLowerInvariant() + (char)92, StringComparison.Ordinal)) continue; }
+                    else if (!string.Equals(c.App.Key, r.AppPath, StringComparison.OrdinalIgnoreCase)) continue;
+                }
                 if (r.Direction == "in") continue;
                 if (r.Ports != null && !PortIn(r.Ports, c.RemotePort)) continue;
                 if (!Rules.RuleMatchesRemote(r, c.Remote, c.Geo, HostOf(c.Remote))) continue;
@@ -380,6 +386,7 @@ public sealed class Engine : IDisposable
             }
         }
         if (r.Kind == "app") try { Db?.AddEvent("block", r.AppPath?.ToLowerInvariant(), L.T("Aplicație blocată", "App blocked")); } catch { }
+        if (r.Kind == "folder") try { Db?.AddEvent("block", null, L.T("Folder blocat: ", "Folder blocked: ") + r.AppPath); } catch { }
     }
 
     static bool PortIn(string spec, int port)

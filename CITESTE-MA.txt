@@ -1,4 +1,4 @@
-﻿FallenSec v1.4 - Firewall și monitor de rețea pentru Windows
+﻿FallenSec v1.5 - Firewall și monitor de rețea pentru Windows
 © 2026 Fallen
 =============================================================
 
@@ -27,6 +27,10 @@ CE FACE
   Butonul ⊘ deschide variante de blocare (doar IP-ul, domeniul, țara, portul).
 - Reguli: reguli detaliate, per aplicație sau pentru tot PC-ul, pe
   domeniu (cu subdomenii), IP/CIDR, țară, porturi, protocol, direcție.
+- Blocare pe folder: toate programele (.exe) dintr-un folder și din
+  subfoldere pierd internetul (Reguli > "Blochează un folder" sau, din
+  Aplicații, "Blochează tot folderul"). Programele noi apărute în folder
+  sunt blocate automat.
 - Istoric: grafice de trafic, top aplicații, țări, destinații, porturi,
   jurnal (aplicații noi, blocări). Istoricul se păstrează pentru totdeauna
   (perioade de 1 oră până la „Tot”, plus total pe fiecare lună).
@@ -63,6 +67,16 @@ Hartă: Natural Earth / world-atlas. Grafice: d3.js.
 
 ISTORIC VERSIUNI
 ----------------
+v1.5 (26.11.2026)
+- Blocare pe folder: toate programele (.exe) dintr-un folder și din
+  subfoldere pierd internetul, intrare și ieșire. Programele noi apărute
+  în folder sunt blocate automat (cel mult 30 de secunde).
+- Aplicații > rând extins > "Blochează tot folderul": blochezi folderul
+  unei aplicații dintr-un click.
+- Aplicațiile blocate prin folder apar ca "BLOCAT (folder)".
+- Protecții: discuri întregi, folderul Windows, Program Files, ProgramData
+  și profilul tău nu pot fi blocate.
+
 v1.4 (25.11.2026)
 - Istoricul nu se mai șterge după 30 de zile: se păstrează pentru totdeauna
   (se poate limita din Setări). Ultimele 30 de zile rămân la minut, datele

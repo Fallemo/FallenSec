@@ -8,7 +8,7 @@ namespace FallenSec.Core;
 
 public static class AppInfoConst
 {
-    public const string Version = "1.4";
+    public const string Version = "1.5";
     public const string Copyright = "© 2026 Fallen";
 }
 

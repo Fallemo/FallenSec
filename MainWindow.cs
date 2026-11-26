@@ -207,6 +207,26 @@ public sealed class MainWindow : Window
                     var kind = S("engine");
                     Task.Run(() => Toast(_engine.SwitchBlockEngine(kind), "info"));
                     break;
+                case "browseFolder":
+                {
+                    var fd = new Microsoft.Win32.OpenFolderDialog { Title = L.T("Alege folderul de blocat", "Choose the folder to block") };
+                    var cur = S("path");
+                    if (!string.IsNullOrEmpty(cur) && Directory.Exists(cur)) fd.InitialDirectory = cur;
+                    if (fd.ShowDialog(this) == true) Send(new { type = "browsedFolder", path = fd.FolderName });
+                    break;
+                }
+                case "folderInfo":
+                {
+                    var fpath = S("path");
+                    Task.Run(() =>
+                    {
+                        var err = RuleEngine.CheckFolder(fpath, out var full);
+                        if (err != null) { Send(new { type = "folderInfo", req = fpath, path = fpath, error = err }); return; }
+                        var exes = RuleEngine.FolderExes(full, out var trunc);
+                        Send(new { type = "folderInfo", req = fpath, path = full, count = exes.Count, truncated = trunc, sample = exes.Take(6).Select(x => Path.GetRelativePath(full, x)).ToArray() });
+                    });
+                    break;
+                }
                 case "hideToTray":
                     HideToTray();
                     break;
